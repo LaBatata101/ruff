@@ -19,26 +19,26 @@ use shellexpand::LookupError;
 use strum::IntoEnumIterator;
 
 use ruff_cache::cache_dir;
+use ruff_codes::registry::{RuleNamespace, INCOMPATIBLE_CODES};
+use ruff_codes::rule_selector::{PreviewOptions, RuleSelector, Specificity};
+use ruff_codes::types::PreviewMode;
+use ruff_codes::types::{
+    CompiledPerFileIgnoreList, CompiledPerFileTargetVersionList, ExtensionMapping, FilePattern,
+    FilePatternSet, GlobPath, OutputFormat, PerFileIgnore, PerFileTargetVersion, RequiredVersion,
+    UnsafeFixes,
+};
+use ruff_codes::{Rule, RuleSet};
 use ruff_formatter::IndentStyle;
 use ruff_graph::{AnalyzeSettings, Direction};
-use ruff_linter::line_width::{IndentWidth, LineLength};
-use ruff_linter::registry::RuleNamespace;
-use ruff_linter::registry::{Rule, RuleSet, INCOMPATIBLE_CODES};
-use ruff_linter::rule_selector::{PreviewOptions, Specificity};
-use ruff_linter::rules::{flake8_import_conventions, isort, pycodestyle};
-use ruff_linter::settings::fix_safety_table::FixSafetyTable;
-use ruff_linter::settings::rule_table::RuleTable;
-use ruff_linter::settings::types::{
-    CompiledPerFileIgnoreList, CompiledPerFileTargetVersionList, ExtensionMapping, FilePattern,
-    FilePatternSet, GlobPath, OutputFormat, PerFileIgnore, PerFileTargetVersion, PreviewMode,
-    RequiredVersion, UnsafeFixes,
+use ruff_linter_commons::line_width::{IndentWidth, LineLength};
+use ruff_linter_commons::{
+    fs, warn_user_once, warn_user_once_by_id, warn_user_once_by_message,
 };
-use ruff_linter::settings::{
+use ruff_linter_settings::fix_safety_table::FixSafetyTable;
+use ruff_linter_settings::rule_table::RuleTable;
+use ruff_linter_settings::rules::{flake8_import_conventions, isort, pycodestyle};
+use ruff_linter_settings::{
     LinterSettings, TargetVersion, DEFAULT_SELECTORS, DUMMY_VARIABLE_RGX, TASK_TAGS,
-};
-use ruff_linter::{
-    fs, warn_user_once, warn_user_once_by_id, warn_user_once_by_message, RuleSelector,
-    RUFF_PKG_VERSION,
 };
 use ruff_python_ast as ast;
 use ruff_python_formatter::{
@@ -58,6 +58,9 @@ use crate::options::{
 use crate::settings::{
     FileResolverSettings, FormatterSettings, LineEnding, Settings, EXCLUDE, INCLUDE,
 };
+
+// FIX: don't hardcode this
+const RUFF_PKG_VERSION: &str = "0.0.0";
 
 #[derive(Clone, Debug, Default)]
 pub struct RuleSelection {
@@ -403,9 +406,9 @@ impl Configuration {
                 pycodestyle: if let Some(pycodestyle) = lint.pycodestyle {
                     pycodestyle.into_settings(line_length)
                 } else {
-                    pycodestyle::settings::Settings {
+                    pycodestyle::Settings {
                         max_line_length: line_length,
-                        ..pycodestyle::settings::Settings::default()
+                        ..pycodestyle::Settings::default()
                     }
                 },
                 pydoclint: lint
@@ -1589,8 +1592,8 @@ fn warn_about_deprecated_top_level_lint_options(
 
 /// Detect conflicts between I002 (missing-required-import) and ICN001 (unconventional-import-alias)
 fn conflicting_import_settings(
-    isort: &isort::settings::Settings,
-    flake8_import_conventions: &flake8_import_conventions::settings::Settings,
+    isort: &isort::Settings,
+    flake8_import_conventions: &flake8_import_conventions::Settings,
 ) -> Result<()> {
     use std::fmt::Write;
     let mut err_body = String::new();
@@ -1632,11 +1635,10 @@ mod tests {
 
     use anyhow::Result;
 
-    use ruff_linter::codes::{Flake8Copyright, Pycodestyle, Refurb};
-    use ruff_linter::registry::{Linter, Rule, RuleSet};
-    use ruff_linter::rule_selector::PreviewOptions;
-    use ruff_linter::settings::types::PreviewMode;
-    use ruff_linter::RuleSelector;
+    use ruff_codes::codes::{Flake8Copyright, Pycodestyle, Refurb};
+    use ruff_codes::rule_selector::{PreviewOptions, RuleSelector};
+    use ruff_codes::types::PreviewMode;
+    use ruff_codes::{Linter, Rule, RuleSet};
 
     use crate::configuration::{LintConfiguration, RuleSelection};
     use crate::options::PydocstyleOptions;
@@ -2043,7 +2045,7 @@ mod tests {
             rule_selections: Vec<RuleSelection>,
             should_be_overridden: bool,
         ) -> Result<()> {
-            use ruff_linter::rules::pydocstyle::settings::Convention;
+            use ruff_linter_settings::rules::pydocstyle::Convention;
 
             let config = LintConfiguration {
                 rule_selections,

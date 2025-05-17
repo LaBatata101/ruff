@@ -40,7 +40,7 @@ mod tests {
     use anyhow::Result;
     use test_case::test_case;
 
-    use crate::registry::Rule;
+    use ruff_codes::Rule;
     use crate::test::test_path;
     use crate::{assert_messages, settings};
 

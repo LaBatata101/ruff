@@ -1,5 +1,5 @@
 use lsp_types::ClientCapabilities;
-use ruff_linter::display_settings;
+use ruff_linter_macros::display_settings;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 #[expect(clippy::struct_excessive_bools)]

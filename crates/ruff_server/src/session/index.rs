@@ -5,6 +5,7 @@ use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 use anyhow::anyhow;
 use lsp_types::{FileEvent, Url};
+use ruff_linter_commons::source_kind::SourceKind;
 use rustc_hash::{FxHashMap, FxHashSet};
 use thiserror::Error;
 
@@ -553,13 +554,13 @@ impl DocumentQuery {
     }
 
     /// Generate a source kind used by the linter.
-    pub(crate) fn make_source_kind(&self) -> ruff_linter::source_kind::SourceKind {
+    pub(crate) fn make_source_kind(&self) -> SourceKind {
         match self {
             Self::Text { document, .. } => {
-                ruff_linter::source_kind::SourceKind::Python(document.contents().to_string())
+                SourceKind::Python(document.contents().to_string())
             }
             Self::Notebook { notebook, .. } => {
-                ruff_linter::source_kind::SourceKind::IpyNotebook(notebook.make_ruff_notebook())
+                SourceKind::IpyNotebook(notebook.make_ruff_notebook())
             }
         }
     }

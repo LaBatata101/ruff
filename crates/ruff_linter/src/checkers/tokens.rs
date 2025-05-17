@@ -9,15 +9,25 @@ use ruff_python_codegen::Stylist;
 use ruff_python_index::Indexer;
 use ruff_python_parser::Tokens;
 
-use crate::directives::TodoComment;
-use crate::registry::{AsRule, Rule};
-use crate::rules::pycodestyle::rules::BlankLinesChecker;
-use crate::rules::{
-    eradicate, flake8_commas, flake8_executable, flake8_fixme, flake8_implicit_str_concat,
-    flake8_pyi, flake8_todos, pycodestyle, pygrep_hooks, pylint, pyupgrade, ruff,
-};
-use crate::settings::LinterSettings;
-use crate::Locator;
+use ruff_linter_directives::TodoComment;
+use ruff_codes::{AsRule, Rule};
+use ruff_rule_pycodestyle::rules::BlankLinesChecker;
+use ruff_rule_eradicate::{self as eradicate};
+use ruff_rule_flake8_commas::{self as flake8_commas};
+use ruff_rule_flake8_executable::{self as flake8_executable};
+use ruff_rule_flake8_fixme::{self as flake8_fixme};
+use ruff_rule_flake8_implicit_str_concat::{self as flake8_implicit_str_concat};
+use ruff_rule_flake8_pyi::{self as flake8_pyi};
+use ruff_rule_flake8_todos::{self as flake8_todos};
+use ruff_rule_pycodestyle::{self as pycodestyle};
+use ruff_rule_pygrep_hooks::{self as pygrep_hooks};
+use ruff_rule_pylint::{self as pylint};
+use ruff_rule_pyupgrade::{self as pyupgrade};
+use ruff_rule_ruff::{self as ruff};
+
+
+use ruff_linter_settings::LinterSettings;
+use ruff_linter_commons::Locator;
 
 #[expect(clippy::too_many_arguments)]
 pub(crate) fn check_tokens(

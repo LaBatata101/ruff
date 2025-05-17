@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use lsp_server::ErrorCode;
 use lsp_types::{self as types, request as req};
 
-use ruff_linter::codes::Rule;
+use ruff_codes::Rule;
 
 use crate::edit::WorkspaceEditTracker;
 use crate::fix::Fixes;

@@ -7,7 +7,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use ruff::{args::GlobalConfigArgs, check};
-use ruff_linter::logging::set_up_logging;
+use ruff_linter_commons::logging::set_up_logging;
 use std::process::ExitCode;
 
 mod format_dev;

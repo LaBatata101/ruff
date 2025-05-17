@@ -2589,10 +2589,14 @@ dependencies = [
  "rayon",
  "regex",
  "ruff_cache",
+ "ruff_codes",
  "ruff_db",
  "ruff_diagnostics",
  "ruff_graph",
  "ruff_linter",
+ "ruff_linter_commons",
+ "ruff_linter_message",
+ "ruff_linter_settings",
  "ruff_macros",
  "ruff_notebook",
  "ruff_options_metadata",
@@ -2641,8 +2645,11 @@ dependencies = [
  "criterion",
  "mimalloc",
  "rayon",
+ "ruff_codes",
  "ruff_db",
  "ruff_linter",
+ "ruff_linter_commons",
+ "ruff_linter_settings",
  "ruff_python_ast",
  "ruff_python_formatter",
  "ruff_python_parser",
@@ -2663,6 +2670,39 @@ dependencies = [
  "regex",
  "ruff_macros",
  "seahash",
+]
+
+[[package]]
+name = "ruff_codes"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "colored 3.0.0",
+ "glob",
+ "globset",
+ "is-macro",
+ "itertools 0.14.0",
+ "log",
+ "pep440_rs",
+ "ruff_cache",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_macros",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_source_file",
+ "rustc-hash 2.1.1",
+ "schemars",
+ "serde",
+ "strum",
+ "strum_macros",
+ "tempfile",
+ "thiserror 2.0.12",
+ "unicode_names2",
 ]
 
 [[package]]
@@ -2718,9 +2758,11 @@ dependencies = [
  "rayon",
  "regex",
  "ruff",
+ "ruff_codes",
  "ruff_diagnostics",
  "ruff_formatter",
  "ruff_linter",
+ "ruff_linter_commons",
  "ruff_notebook",
  "ruff_options_metadata",
  "ruff_python_ast",
@@ -2778,8 +2820,9 @@ dependencies = [
  "anyhow",
  "clap",
  "ruff_cache",
+ "ruff_codes",
  "ruff_db",
- "ruff_linter",
+ "ruff_linter_macros",
  "ruff_macros",
  "ruff_python_ast",
  "ruff_python_parser",
@@ -2829,8 +2872,17 @@ dependencies = [
  "regex",
  "ruff_annotate_snippets",
  "ruff_cache",
+ "ruff_codes",
  "ruff_db",
  "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_directives",
+ "ruff_linter_fix",
+ "ruff_linter_macros",
+ "ruff_linter_message",
+ "ruff_linter_noqa",
+ "ruff_linter_settings",
  "ruff_macros",
  "ruff_notebook",
  "ruff_python_ast",
@@ -2841,6 +2893,65 @@ dependencies = [
  "ruff_python_semantic",
  "ruff_python_stdlib",
  "ruff_python_trivia",
+ "ruff_rule_airflow",
+ "ruff_rule_eradicate",
+ "ruff_rule_fastapi",
+ "ruff_rule_flake8_2020",
+ "ruff_rule_flake8_annotations",
+ "ruff_rule_flake8_async",
+ "ruff_rule_flake8_bandit",
+ "ruff_rule_flake8_blind_except",
+ "ruff_rule_flake8_boolean_trap",
+ "ruff_rule_flake8_bugbear",
+ "ruff_rule_flake8_builtins",
+ "ruff_rule_flake8_commas",
+ "ruff_rule_flake8_comprehensions",
+ "ruff_rule_flake8_copyright",
+ "ruff_rule_flake8_datetimez",
+ "ruff_rule_flake8_debugger",
+ "ruff_rule_flake8_django",
+ "ruff_rule_flake8_errmsg",
+ "ruff_rule_flake8_executable",
+ "ruff_rule_flake8_fixme",
+ "ruff_rule_flake8_future_annotations",
+ "ruff_rule_flake8_gettext",
+ "ruff_rule_flake8_implicit_str_concat",
+ "ruff_rule_flake8_import_conventions",
+ "ruff_rule_flake8_logging",
+ "ruff_rule_flake8_logging_format",
+ "ruff_rule_flake8_no_pep420",
+ "ruff_rule_flake8_pie",
+ "ruff_rule_flake8_print",
+ "ruff_rule_flake8_pyi",
+ "ruff_rule_flake8_pytest_style",
+ "ruff_rule_flake8_quotes",
+ "ruff_rule_flake8_raise",
+ "ruff_rule_flake8_return",
+ "ruff_rule_flake8_self",
+ "ruff_rule_flake8_simplify",
+ "ruff_rule_flake8_slots",
+ "ruff_rule_flake8_tidy_imports",
+ "ruff_rule_flake8_todos",
+ "ruff_rule_flake8_type_checking",
+ "ruff_rule_flake8_unused_arguments",
+ "ruff_rule_flake8_use_pathlib",
+ "ruff_rule_flynt",
+ "ruff_rule_isort",
+ "ruff_rule_mccabe",
+ "ruff_rule_numpy",
+ "ruff_rule_pandas_vet",
+ "ruff_rule_pep8_naming",
+ "ruff_rule_perflint",
+ "ruff_rule_pycodestyle",
+ "ruff_rule_pydoclint",
+ "ruff_rule_pydocstyle",
+ "ruff_rule_pyflakes",
+ "ruff_rule_pygrep_hooks",
+ "ruff_rule_pylint",
+ "ruff_rule_pyupgrade",
+ "ruff_rule_refurb",
+ "ruff_rule_ruff",
+ "ruff_rule_tryceratops",
  "ruff_source_file",
  "ruff_text_size",
  "rustc-hash 2.1.1",
@@ -2860,6 +2971,244 @@ dependencies = [
  "unicode-width 0.2.0",
  "unicode_names2",
  "url",
+]
+
+[[package]]
+name = "ruff_linter_checkers"
+version = "0.0.0"
+dependencies = [
+ "itertools 0.14.0",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_noqa",
+ "ruff_linter_settings",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "typed-arena",
+]
+
+[[package]]
+name = "ruff_linter_commons"
+version = "0.0.0"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "bitflags 2.9.0",
+ "clap",
+ "colored 3.0.0",
+ "fern",
+ "glob",
+ "globset",
+ "insta",
+ "is-macro",
+ "itertools 0.14.0",
+ "jiff",
+ "log",
+ "memchr",
+ "path-absolutize",
+ "pathdiff",
+ "regex",
+ "ruff_cache",
+ "ruff_diagnostics",
+ "ruff_macros",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "schemars",
+ "serde",
+ "serde_json",
+ "similar",
+ "smallvec",
+ "strum",
+ "strum_macros",
+ "tempfile",
+ "test-case",
+ "thiserror 2.0.12",
+ "unicode-normalization",
+ "unicode-width 0.2.0",
+ "unicode_names2",
+]
+
+[[package]]
+name = "ruff_linter_directives"
+version = "0.0.0"
+dependencies = [
+ "bitflags 2.9.0",
+ "ruff_linter_commons",
+ "ruff_linter_noqa",
+ "ruff_linter_settings",
+ "ruff_python_index",
+ "ruff_python_parser",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+]
+
+[[package]]
+name = "ruff_linter_fix"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "itertools 0.14.0",
+ "libcst",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_message",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "smallvec",
+ "test-case",
+ "unicode-normalization",
+ "unicode-width 0.2.0",
+]
+
+[[package]]
+name = "ruff_linter_macros"
+version = "0.0.0"
+
+[[package]]
+name = "ruff_linter_message"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "bitflags 2.9.0",
+ "colored 3.0.0",
+ "insta",
+ "quick-junit",
+ "ruff_annotate_snippets",
+ "ruff_codes",
+ "ruff_db",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_notebook",
+ "ruff_python_parser",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "serde",
+ "serde_json",
+ "similar",
+ "url",
+]
+
+[[package]]
+name = "ruff_linter_noqa"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "insta",
+ "itertools 0.14.0",
+ "log",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_message",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+]
+
+[[package]]
+name = "ruff_linter_settings"
+version = "0.0.0"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "bitflags 2.9.0",
+ "clap",
+ "colored 3.0.0",
+ "fern",
+ "glob",
+ "globset",
+ "is-macro",
+ "itertools 0.14.0",
+ "jiff",
+ "libcst",
+ "log",
+ "memchr",
+ "path-absolutize",
+ "pathdiff",
+ "pep440_rs",
+ "regex",
+ "ruff_cache",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_macros",
+ "ruff_macros",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "schemars",
+ "serde",
+ "serde_json",
+ "similar",
+ "smallvec",
+ "strum",
+ "strum_macros",
+ "thiserror 2.0.12",
+ "unicode-normalization",
+ "unicode-width 0.2.0",
+ "unicode_names2",
+]
+
+[[package]]
+name = "ruff_linter_test"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "itertools 0.14.0",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_directives",
+ "ruff_linter_fix",
+ "ruff_linter_message",
+ "ruff_linter_settings",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_parser",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "rustc-hash 2.1.1",
+ "test-case",
 ]
 
 [[package]]
@@ -3081,6 +3430,1491 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruff_rule_airflow"
+version = "0.0.0"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "bitflags 2.9.0",
+ "clap",
+ "colored 3.0.0",
+ "fern",
+ "glob",
+ "globset",
+ "is-macro",
+ "itertools 0.14.0",
+ "jiff",
+ "libcst",
+ "log",
+ "memchr",
+ "path-absolutize",
+ "pathdiff",
+ "pep440_rs",
+ "quick-junit",
+ "regex",
+ "ruff_annotate_snippets",
+ "ruff_cache",
+ "ruff_codes",
+ "ruff_db",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "schemars",
+ "serde",
+ "serde_json",
+ "similar",
+ "smallvec",
+ "strum",
+ "strum_macros",
+ "test-case",
+ "thiserror 2.0.12",
+ "typed-arena",
+ "unicode-normalization",
+ "unicode-width 0.2.0",
+ "unicode_names2",
+ "url",
+]
+
+[[package]]
+name = "ruff_rule_eradicate"
+version = "0.1.0"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_settings",
+ "ruff_macros",
+ "ruff_python_parser",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_fastapi"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_2020"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_annotations"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_async"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_bandit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_blind_except"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_boolean_trap"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_bugbear"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_builtins"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_source_file",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_commas"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_index",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_comprehensions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "libcst",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_copyright"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_datetimez"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_debugger"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_django"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_errmsg"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_source_file",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_executable"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "is-wsl",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_fixme"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_directives",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_future_annotations"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_gettext"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_implicit_str_concat"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_index",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_source_file",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_import_conventions"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_logging"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_logging_format"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_no_pep420"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_pie"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_print"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_pyi"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitflags 2.9.0",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "smallvec",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_pytest_style"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "libcst",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_quotes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "memchr",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_raise"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_return"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_self"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_simplify"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "libcst",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_slots"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_tidy_imports"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_todos"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_directives",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_type_checking"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_unused_arguments"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flake8_use_pathlib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_flynt"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_isort"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "glob",
+ "itertools 0.14.0",
+ "natord",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_commons",
+ "ruff_linter_directives",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+ "unicode-width 0.2.0",
+]
+
+[[package]]
+name = "ruff_rule_mccabe"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_diagnostics",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_parser",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_numpy"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pandas_vet"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pep8_naming"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_perflint"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pycodestyle"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitflags 2.9.0",
+ "is-macro",
+ "itertools 0.14.0",
+ "memchr",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_notebook",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pydoclint"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_source_file",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pydocstyle"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "imperative",
+ "is-macro",
+ "itertools 0.14.0",
+ "memchr",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "strum",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pyflakes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pygrep_hooks"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "memchr",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_noqa",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pylint"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_index",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_pyupgrade"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "libcst",
+ "log",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "serde",
+ "test-case",
+ "typed-arena",
+]
+
+[[package]]
+name = "ruff_rule_refurb"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "memchr",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "test-case",
+]
+
+[[package]]
+name = "ruff_rule_ruff"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "bitflags 2.9.0",
+ "is-macro",
+ "itertools 0.14.0",
+ "memchr",
+ "natord",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_noqa",
+ "ruff_linter_settings",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_codegen",
+ "ruff_python_literal",
+ "ruff_python_parser",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_python_trivia",
+ "ruff_source_file",
+ "ruff_text_size",
+ "rustc-hash 2.1.1",
+ "smallvec",
+ "unicode_names2",
+]
+
+[[package]]
+name = "ruff_rule_tryceratops"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "is-macro",
+ "itertools 0.14.0",
+ "regex",
+ "ruff_codes",
+ "ruff_diagnostics",
+ "ruff_linter_checkers",
+ "ruff_linter_commons",
+ "ruff_linter_fix",
+ "ruff_linter_settings",
+ "ruff_linter_test",
+ "ruff_macros",
+ "ruff_python_ast",
+ "ruff_python_semantic",
+ "ruff_python_stdlib",
+ "ruff_text_size",
+ "test-case",
+]
+
+[[package]]
 name = "ruff_server"
 version = "0.2.2"
 dependencies = [
@@ -3093,9 +4927,16 @@ dependencies = [
  "lsp-server",
  "lsp-types",
  "regex",
+ "ruff_codes",
  "ruff_diagnostics",
  "ruff_formatter",
  "ruff_linter",
+ "ruff_linter_commons",
+ "ruff_linter_directives",
+ "ruff_linter_macros",
+ "ruff_linter_message",
+ "ruff_linter_noqa",
+ "ruff_linter_settings",
  "ruff_notebook",
  "ruff_python_ast",
  "ruff_python_codegen",
@@ -3144,8 +4985,13 @@ dependencies = [
  "getrandom 0.3.3",
  "js-sys",
  "log",
+ "ruff_codes",
  "ruff_formatter",
  "ruff_linter",
+ "ruff_linter_commons",
+ "ruff_linter_directives",
+ "ruff_linter_message",
+ "ruff_linter_settings",
  "ruff_python_ast",
  "ruff_python_codegen",
  "ruff_python_formatter",
@@ -3181,9 +5027,13 @@ dependencies = [
  "pep440_rs",
  "regex",
  "ruff_cache",
+ "ruff_codes",
  "ruff_formatter",
  "ruff_graph",
  "ruff_linter",
+ "ruff_linter_commons",
+ "ruff_linter_macros",
+ "ruff_linter_settings",
  "ruff_macros",
  "ruff_options_metadata",
  "ruff_python_ast",

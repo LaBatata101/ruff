@@ -68,7 +68,7 @@ mod tests {
     use std::path::Path;
 
     use insta::assert_snapshot;
-    use ruff_linter::settings::types::{CompiledPerFileTargetVersionList, PerFileTargetVersion};
+    use ruff_codes::types::{CompiledPerFileTargetVersionList, PerFileTargetVersion};
     use ruff_python_ast::{PySourceType, PythonVersion};
     use ruff_text_size::{TextRange, TextSize};
     use ruff_workspace::FormatterSettings;

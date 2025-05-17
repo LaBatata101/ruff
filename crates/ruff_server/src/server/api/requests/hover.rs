@@ -4,7 +4,7 @@ use anyhow::Context;
 use lsp_types::{self as types, request as req};
 use regex::Regex;
 use ruff_diagnostics::FixAvailability;
-use ruff_linter::registry::{Linter, Rule, RuleNamespace};
+use ruff_codes::{Linter, Rule, RuleNamespace};
 use ruff_source_file::OneIndexed;
 use std::fmt::Write;
 

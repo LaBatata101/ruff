@@ -1,0 +1,45 @@
+[package]
+name = "ruff_linter_test"
+version = "0.0.0"
+publish = false
+authors = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+
+[lib]
+
+[dependencies]
+ruff_diagnostics = { workspace = true }
+ruff_python_codegen = { workspace = true }
+ruff_python_ast = { workspace = true }
+ruff_notebook = { workspace = true }
+ruff_python_index = { workspace = true }
+ruff_python_parser = { workspace = true }
+ruff_python_trivia = { workspace = true }
+ruff_source_file = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_linter_commons = { workspace = true }
+ruff_linter_message = { workspace = true }
+ruff_linter_fix = { workspace = true }
+ruff_linter_directives = { workspace = true }
+
+anyhow = { workspace = true }
+itertools = { workspace = true }
+rustc-hash = { workspace = true }
+
+
+[dev-dependencies]
+test-case = { workspace = true }
+
+[features]
+default = []
+# Enables rules for internal integration tests
+test-rules = []
+
+[lints]
+workspace = true

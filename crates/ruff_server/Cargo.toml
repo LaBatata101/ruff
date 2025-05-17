@@ -25,6 +25,13 @@ ruff_python_parser = { workspace = true }
 ruff_source_file = { workspace = true }
 ruff_text_size = { workspace = true }
 ruff_workspace = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_directives = { workspace = true }
+ruff_linter_noqa = { workspace = true }
+ruff_linter_message = { workspace = true }
+ruff_linter_commons = { workspace = true }
+ruff_linter_macros = { workspace = true }
 
 anyhow = { workspace = true }
 crossbeam = { workspace = true }

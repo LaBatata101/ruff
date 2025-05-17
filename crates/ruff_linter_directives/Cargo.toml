@@ -1,0 +1,25 @@
+[package]
+name = "ruff_linter_directives"
+version = "0.0.0"
+publish = false
+authors = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+
+[lib]
+
+[dependencies]
+ruff_python_index = { workspace = true }
+ruff_python_parser = { workspace = true }
+ruff_python_trivia = { workspace = true }
+ruff_source_file = { workspace = true }
+ruff_text_size = { workspace = true }
+ruff_linter_noqa = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_linter_commons = { workspace = true }
+
+bitflags = { workspace = true }

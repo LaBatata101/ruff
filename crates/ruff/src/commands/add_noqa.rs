@@ -7,8 +7,8 @@ use log::{debug, error};
 use rayon::prelude::*;
 
 use ruff_linter::linter::add_noqa_to_path;
-use ruff_linter::source_kind::SourceKind;
-use ruff_linter::warn_user_once;
+use ruff_linter_commons::source_kind::SourceKind;
+use ruff_linter_commons::warn_user_once;
 use ruff_python_ast::{PySourceType, SourceType};
 use ruff_workspace::resolver::{
     match_exclusion, python_files_in_path, PyprojectConfig, ResolvedFile,

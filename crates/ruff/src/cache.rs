@@ -13,16 +13,16 @@ use itertools::Itertools;
 use log::{debug, error};
 use rayon::iter::ParallelIterator;
 use rayon::iter::{IntoParallelIterator, ParallelBridge};
-use ruff_linter::{codes::Rule, registry::AsRule};
+use ruff_codes::{Rule, AsRule};
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
 use ruff_cache::{CacheKey, CacheKeyHasher};
 use ruff_diagnostics::Fix;
-use ruff_linter::message::{DiagnosticMessage, Message};
-use ruff_linter::package::PackageRoot;
-use ruff_linter::{warn_user, VERSION};
+use ruff_linter_message::{DiagnosticMessage, Message};
+use ruff_linter_commons::package::PackageRoot;
+use ruff_linter_commons::{warn_user};
 use ruff_macros::CacheKey;
 use ruff_notebook::NotebookIndex;
 use ruff_source_file::SourceFileBuilder;
@@ -31,6 +31,9 @@ use ruff_workspace::resolver::Resolver;
 use ruff_workspace::Settings;
 
 use crate::diagnostics::Diagnostics;
+
+// FIX: don't hardcode this
+const VERSION: &str = "0.0.0";
 
 /// [`Path`] that is relative to the package root in [`PackageCache`].
 pub(crate) type RelativePath = Path;
@@ -599,14 +602,14 @@ mod tests {
     use anyhow::Result;
     use filetime::{set_file_mtime, FileTime};
     use itertools::Itertools;
-    use ruff_linter::settings::LinterSettings;
+    use ruff_linter_settings::LinterSettings;
     use test_case::test_case;
 
     use ruff_cache::CACHE_DIR_NAME;
-    use ruff_linter::message::Message;
-    use ruff_linter::package::PackageRoot;
-    use ruff_linter::settings::flags;
-    use ruff_linter::settings::types::UnsafeFixes;
+    use ruff_linter_message::Message;
+    use ruff_linter_commons::package::PackageRoot;
+    use ruff_linter_settings::flags;
+    use ruff_codes::types::UnsafeFixes;
     use ruff_python_ast::{PySourceType, PythonVersion};
     use ruff_workspace::Settings;
 

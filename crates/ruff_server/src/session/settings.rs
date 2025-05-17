@@ -6,8 +6,8 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use thiserror::Error;
 
-use ruff_linter::line_width::LineLength;
-use ruff_linter::rule_selector::ParseError;
+use ruff_linter_commons::line_width::LineLength;
+use ruff_codes::rule_selector::ParseError;
 use ruff_linter::RuleSelector;
 use ruff_workspace::options::Options;
 
@@ -538,7 +538,7 @@ mod tests {
     use serde::de::DeserializeOwned;
 
     #[cfg(not(windows))]
-    use ruff_linter::registry::Linter;
+    use ruff_codes::Linter;
 
     use super::*;
 

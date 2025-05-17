@@ -21,6 +21,7 @@ pub(crate) fn derive_impl(input: DeriveInput) -> syn::Result<proc_macro2::TokenS
     let mut parsed = Vec::new();
 
     let mut common_prefix_match_arms = quote!();
+
     let mut name_match_arms =
         quote!(Self::Ruff => "Ruff-specific rules", Self::Numpy => "NumPy-specific rules", );
     let mut url_match_arms = quote!(Self::Ruff => None, Self::Numpy => None, );

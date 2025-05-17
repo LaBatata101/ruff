@@ -5,11 +5,15 @@ use ruff_python_semantic::{
 use ruff_text_size::Ranged;
 
 use crate::checkers::ast::Checker;
-use crate::codes::Rule;
-use crate::docstrings::Docstring;
-use crate::fs::relativize_path;
-use crate::rules::{flake8_annotations, flake8_pyi, pydoclint, pydocstyle, pylint};
-use crate::{docstrings, warn_user};
+use ruff_codes::Rule;
+use ruff_linter_commons::docstrings::{self ,Docstring};
+use ruff_linter_commons::fs::relativize_path;
+use ruff_linter_commons::warn_user;
+use ruff_rule_flake8_annotations::{self as flake8_annotations};
+use ruff_rule_flake8_pyi::{self as flake8_pyi};
+use ruff_rule_pydoclint::{self as pydoclint};
+use ruff_rule_pydocstyle::{self as pydocstyle};
+use ruff_rule_pylint::{self as pylint};
 
 /// Run lint rules over all [`Definition`] nodes in the [`SemanticModel`].
 ///
@@ -98,13 +102,14 @@ pub(crate) fn definitions(checker: &mut Checker) {
         return;
     }
 
+    let semantic = checker.semantic();
     // Compute visibility of all definitions.
     let exports: Option<Vec<DunderAllName>> = {
         checker
-            .semantic
+            .semantic()
             .global_scope()
             .get_all("__all__")
-            .map(|binding_id| &checker.semantic.bindings[binding_id])
+            .map(|binding_id| &semantic.bindings[binding_id])
             .filter_map(|binding| match &binding.kind {
                 BindingKind::Export(Export { names }) => Some(names.iter().copied()),
                 _ => None,
@@ -114,7 +119,7 @@ pub(crate) fn definitions(checker: &mut Checker) {
             })
     };
 
-    let definitions = std::mem::take(&mut checker.semantic.definitions);
+    let definitions = std::mem::take(&mut checker.semantic.borrow_mut().definitions);
     let mut overloaded_name: Option<&str> = None;
     for ContextualizedDefinition {
         definition,
@@ -134,25 +139,25 @@ pub(crate) fn definitions(checker: &mut Checker) {
                 flake8_annotations::helpers::is_overload_impl(
                     definition,
                     overloaded_name,
-                    &checker.semantic,
+                    &checker.semantic(),
                 )
             }) {
                 checker.report_diagnostics(flake8_annotations::rules::definition(
-                    checker,
+                    &checker.snapshot(),
                     definition,
                     *visibility,
                 ));
             }
             overloaded_name =
-                flake8_annotations::helpers::overloaded_name(definition, &checker.semantic);
+                flake8_annotations::helpers::overloaded_name(definition, &checker.semantic());
         }
 
         // flake8-pyi
         if enforce_stubs {
-            flake8_pyi::rules::docstring_in_stubs(checker, definition, docstring);
+            flake8_pyi::rules::docstring_in_stubs(&checker.snapshot(), definition, docstring);
         }
         if enforce_stubs_and_runtime {
-            flake8_pyi::rules::iter_method_return_iterable(checker, definition);
+            flake8_pyi::rules::iter_method_return_iterable(&checker.snapshot(), definition);
         }
 
         // pylint
@@ -162,7 +167,7 @@ pub(crate) fn definitions(checker: &mut Checker) {
                 ..
             }) = definition
             {
-                pylint::rules::bad_dunder_method_name(checker, method);
+                pylint::rules::bad_dunder_method_name(&checker.snapshot(), method);
             }
         }
 
@@ -171,14 +176,14 @@ pub(crate) fn definitions(checker: &mut Checker) {
             if pydocstyle::helpers::should_ignore_definition(
                 definition,
                 &checker.settings.pydocstyle,
-                &checker.semantic,
+                &checker.semantic(),
             ) {
                 continue;
             }
 
             // Extract a `Docstring` from a `Definition`.
             let Some(string_literal) = docstring else {
-                pydocstyle::rules::not_missing(checker, definition, *visibility);
+                pydocstyle::rules::not_missing(&checker.snapshot(), definition, *visibility);
                 continue;
             };
 
@@ -203,74 +208,74 @@ pub(crate) fn definitions(checker: &mut Checker) {
                 source: checker.source(),
             };
 
-            if !pydocstyle::rules::not_empty(checker, &docstring) {
+            if !pydocstyle::rules::not_empty(&checker.snapshot(), &docstring) {
                 continue;
             }
             if checker.enabled(Rule::UnnecessaryMultilineDocstring) {
-                pydocstyle::rules::one_liner(checker, &docstring);
+                pydocstyle::rules::one_liner(&checker.snapshot(), &docstring);
             }
             if checker.any_enabled(&[Rule::BlankLineAfterFunction, Rule::BlankLineBeforeFunction]) {
-                pydocstyle::rules::blank_before_after_function(checker, &docstring);
+                pydocstyle::rules::blank_before_after_function(&checker.snapshot(), &docstring);
             }
             if checker.any_enabled(&[
                 Rule::BlankLineBeforeClass,
                 Rule::IncorrectBlankLineAfterClass,
                 Rule::IncorrectBlankLineBeforeClass,
             ]) {
-                pydocstyle::rules::blank_before_after_class(checker, &docstring);
+                pydocstyle::rules::blank_before_after_class(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::MissingBlankLineAfterSummary) {
-                pydocstyle::rules::blank_after_summary(checker, &docstring);
+                pydocstyle::rules::blank_after_summary(&checker.snapshot(), &docstring);
             }
             if checker.any_enabled(&[
                 Rule::DocstringTabIndentation,
                 Rule::OverIndentation,
                 Rule::UnderIndentation,
             ]) {
-                pydocstyle::rules::indent(checker, &docstring);
+                pydocstyle::rules::indent(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::NewLineAfterLastParagraph) {
-                pydocstyle::rules::newline_after_last_paragraph(checker, &docstring);
+                pydocstyle::rules::newline_after_last_paragraph(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::SurroundingWhitespace) {
-                pydocstyle::rules::no_surrounding_whitespace(checker, &docstring);
+                pydocstyle::rules::no_surrounding_whitespace(&checker.snapshot(), &docstring);
             }
             if checker.any_enabled(&[
                 Rule::MultiLineSummaryFirstLine,
                 Rule::MultiLineSummarySecondLine,
             ]) {
-                pydocstyle::rules::multi_line_summary_start(checker, &docstring);
+                pydocstyle::rules::multi_line_summary_start(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::TripleSingleQuotes) {
-                pydocstyle::rules::triple_quotes(checker, &docstring);
+                pydocstyle::rules::triple_quotes(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::EscapeSequenceInDocstring) {
-                pydocstyle::rules::backslashes(checker, &docstring);
+                pydocstyle::rules::backslashes(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::MissingTrailingPeriod) {
-                pydocstyle::rules::ends_with_period(checker, &docstring);
+                pydocstyle::rules::ends_with_period(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::NonImperativeMood) {
                 pydocstyle::rules::non_imperative_mood(
-                    checker,
+                    &checker.snapshot(),
                     &docstring,
                     &checker.settings.pydocstyle,
                 );
             }
             if checker.enabled(Rule::SignatureInDocstring) {
-                pydocstyle::rules::no_signature(checker, &docstring);
+                pydocstyle::rules::no_signature(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::FirstWordUncapitalized) {
-                pydocstyle::rules::capitalized(checker, &docstring);
+                pydocstyle::rules::capitalized(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::DocstringStartsWithThis) {
-                pydocstyle::rules::starts_with_this(checker, &docstring);
+                pydocstyle::rules::starts_with_this(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::MissingTerminalPunctuation) {
-                pydocstyle::rules::ends_with_punctuation(checker, &docstring);
+                pydocstyle::rules::ends_with_punctuation(&checker.snapshot(), &docstring);
             }
             if checker.enabled(Rule::OverloadWithDocstring) {
-                pydocstyle::rules::if_needed(checker, &docstring);
+                pydocstyle::rules::if_needed(&checker.snapshot(), &docstring);
             }
 
             let enforce_sections = checker.any_enabled(&[
@@ -298,7 +303,7 @@ pub(crate) fn definitions(checker: &mut Checker) {
 
                 if enforce_sections {
                     pydocstyle::rules::sections(
-                        checker,
+                        &checker.snapshot(),
                         &docstring,
                         &section_contexts,
                         checker.settings.pydocstyle.convention(),
@@ -307,7 +312,7 @@ pub(crate) fn definitions(checker: &mut Checker) {
 
                 if enforce_pydoclint {
                     pydoclint::rules::check_docstring(
-                        checker,
+                        &checker.snapshot(),
                         definition,
                         &docstring,
                         &section_contexts,

@@ -1,0 +1,28 @@
+[package]
+name = "ruff_rule_flake8_blind_except"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ruff_diagnostics = { workspace = true }
+ruff_macros = { workspace = true }
+ruff_python_ast = { workspace = true }
+ruff_python_semantic = { workspace = true }
+ruff_text_size = { workspace = true }
+ruff_linter_checkers = { workspace = true }
+ruff_linter_fix = { workspace = true }
+ruff_python_stdlib = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_commons = { workspace = true }
+ruff_linter_settings = { workspace = true }
+
+anyhow = { workspace = true }
+is-macro = { workspace = true }
+regex = { workspace = true }
+itertools = { workspace = true }
+
+[dev-dependencies]
+test-case = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_linter_test = { workspace = true }

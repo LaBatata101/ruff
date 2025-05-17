@@ -9,18 +9,18 @@ use ruff_diagnostics::{Diagnostic, Edit, Fix};
 use ruff_python_trivia::CommentRanges;
 use ruff_text_size::Ranged;
 
-use crate::fix::edits::delete_comment;
-use crate::noqa::{
+use ruff_linter_fix::edits::delete_comment;
+use ruff_linter_noqa::{
     Code, Directive, FileExemption, FileNoqaDirectives, NoqaDirectives, NoqaMapping,
 };
-use crate::preview::is_check_file_level_directives_enabled;
-use crate::registry::{AsRule, Rule, RuleSet};
-use crate::rule_redirects::get_redirect_target;
-use crate::rules::pygrep_hooks;
-use crate::rules::ruff;
-use crate::rules::ruff::rules::{UnusedCodes, UnusedNOQA};
-use crate::settings::LinterSettings;
-use crate::Locator;
+use ruff_linter_settings::preview::is_check_file_level_directives_enabled;
+use ruff_codes::{AsRule, Rule, RuleSet};
+use ruff_codes::rule_redirects::get_redirect_target;
+use ruff_rule_pygrep_hooks::{self as pygrep_hooks};
+use ruff_rule_ruff::{self as ruff};
+use ruff_rule_ruff::rules::{UnusedCodes, UnusedNOQA};
+use ruff_linter_settings::LinterSettings;
+use ruff_linter_commons::Locator;
 
 #[expect(clippy::too_many_arguments)]
 pub(crate) fn check_noqa(

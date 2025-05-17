@@ -3,8 +3,7 @@ use ruff_python_semantic::Exceptions;
 use ruff_python_stdlib::builtins::version_builtin_was_added;
 
 use crate::checkers::ast::Checker;
-use crate::codes::Rule;
-use crate::rules::pyflakes;
+use ruff_codes::Rule;
 
 /// Run lint rules over all [`UnresolvedReference`] entities in the [`SemanticModel`].
 pub(crate) fn unresolved_references(checker: &Checker) {
@@ -12,11 +11,11 @@ pub(crate) fn unresolved_references(checker: &Checker) {
         return;
     }
 
-    for reference in checker.semantic.unresolved_references() {
+    for reference in checker.semantic().unresolved_references() {
         if reference.is_wildcard_import() {
             if checker.enabled(Rule::UndefinedLocalWithImportStarUsage) {
                 checker.report_diagnostic(Diagnostic::new(
-                    pyflakes::rules::UndefinedLocalWithImportStarUsage {
+                    ruff_rule_pyflakes::rules::UndefinedLocalWithImportStarUsage {
                         name: reference.name(checker.source()).to_string(),
                     },
                     reference.range(),
@@ -24,7 +23,7 @@ pub(crate) fn unresolved_references(checker: &Checker) {
             }
         } else {
             if checker.enabled(Rule::UndefinedName) {
-                if checker.semantic.in_no_type_check() {
+                if checker.semantic().in_no_type_check() {
                     continue;
                 }
 
@@ -43,7 +42,7 @@ pub(crate) fn unresolved_references(checker: &Checker) {
                 let symbol_name = reference.name(checker.source());
 
                 checker.report_diagnostic(Diagnostic::new(
-                    pyflakes::rules::UndefinedName {
+                    ruff_rule_pyflakes::rules::UndefinedName {
                         name: symbol_name.to_string(),
                         minor_version_builtin_added: version_builtin_was_added(symbol_name),
                     },

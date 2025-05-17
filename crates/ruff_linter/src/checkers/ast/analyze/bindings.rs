@@ -1,15 +1,21 @@
 use ruff_diagnostics::{Diagnostic, Fix};
+use ruff_linter_checkers::ast::CheckerSnapshot;
 use ruff_text_size::Ranged;
 
-use crate::checkers::ast::Checker;
-use crate::codes::Rule;
-use crate::rules::{
-    flake8_import_conventions, flake8_pyi, flake8_pytest_style, flake8_type_checking, pyflakes,
-    pylint, pyupgrade, refurb, ruff,
-};
+use ruff_codes::Rule;
+use ruff_rule_flake8_import_conventions::{self as flake8_import_conventions};
+use ruff_rule_flake8_pyi::{self as flake8_pyi};
+use ruff_rule_flake8_pytest_style::{self as flake8_pytest_style};
+use ruff_rule_flake8_type_checking::{self as flake8_type_checking};
+use ruff_rule_pyflakes::{self as pyflakes};
+use ruff_rule_pylint::{self as pylint};
+use ruff_rule_pyupgrade::{self as pyupgrade};
+use ruff_rule_refurb::{self as refurb};
+use ruff_rule_ruff::{self as ruff};
+
 
 /// Run lint rules over the [`Binding`]s.
-pub(crate) fn bindings(checker: &Checker) {
+pub(crate) fn bindings(checker: &CheckerSnapshot) {
     if !checker.any_enabled(&[
         Rule::AssignmentInAssert,
         Rule::InvalidAllFormat,
@@ -29,7 +35,7 @@ pub(crate) fn bindings(checker: &Checker) {
         return;
     }
 
-    for (binding_id, binding) in checker.semantic.bindings.iter_enumerated() {
+    for (binding_id, binding) in checker.semantic().bindings.iter_enumerated() {
         if checker.enabled(Rule::UnusedVariable) {
             if binding.kind.is_bound_exception()
                 && binding.is_unused()
@@ -45,7 +51,7 @@ pub(crate) fn bindings(checker: &Checker) {
                     binding.range(),
                 );
                 diagnostic.try_set_fix(|| {
-                    pyflakes::fixes::remove_exception_handler_assignment(binding, checker.locator)
+                    pyflakes::fixes::remove_exception_handler_assignment(binding, checker.locator())
                         .map(Fix::safe_edit)
                 });
                 checker.report_diagnostic(diagnostic);
@@ -62,7 +68,7 @@ pub(crate) fn bindings(checker: &Checker) {
             }
         }
         if checker.enabled(Rule::NonAsciiName) {
-            if let Some(diagnostic) = pylint::rules::non_ascii_name(binding, checker.locator) {
+            if let Some(diagnostic) = pylint::rules::non_ascii_name(binding, checker.locator()) {
                 checker.report_diagnostic(diagnostic);
             }
         }

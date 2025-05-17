@@ -8,12 +8,10 @@ use crate::{
     session::DocumentQuery,
     PositionEncoding,
 };
-use ruff_linter::package::PackageRoot;
-use ruff_linter::{
-    linter::FixerResult,
-    packaging::detect_package_root,
-    settings::{flags, LinterSettings},
-};
+use ruff_linter::linter::FixerResult;
+use ruff_linter_commons::package::PackageRoot;
+use ruff_linter_commons::packaging::detect_package_root;
+use ruff_linter_settings::{flags, LinterSettings};
 use ruff_notebook::SourceValue;
 use ruff_source_file::LineIndex;
 

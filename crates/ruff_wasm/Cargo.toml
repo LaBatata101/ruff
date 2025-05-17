@@ -30,6 +30,11 @@ ruff_python_trivia = { workspace = true }
 ruff_source_file = { workspace = true }
 ruff_text_size = { workspace = true }
 ruff_workspace = { workspace = true }
+ruff_linter_message = { workspace = true }
+ruff_linter_directives = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_commons = { workspace = true }
 
 console_error_panic_hook = { workspace = true, optional = true }
 console_log = { workspace = true }

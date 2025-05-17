@@ -1,0 +1,29 @@
+[package]
+name = "ruff_rule_flake8_implicit_str_concat"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ruff_diagnostics = { workspace = true }
+ruff_macros = { workspace = true }
+ruff_python_ast = { workspace = true }
+ruff_python_semantic = { workspace = true }
+ruff_text_size = { workspace = true }
+ruff_python_stdlib = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_commons = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_source_file = { workspace = true }
+ruff_python_parser = { workspace = true }
+ruff_python_index = { workspace = true }
+
+anyhow = { workspace = true }
+is-macro = { workspace = true }
+regex = { workspace = true }
+itertools = { workspace = true }
+
+[dev-dependencies]
+test-case = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_linter_test = { workspace = true }

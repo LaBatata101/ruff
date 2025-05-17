@@ -1,8 +1,7 @@
 use ruff_python_ast::{PythonVersion, StmtFunctionDef};
 use ruff_python_semantic::{ScopeKind, SemanticModel};
 
-use crate::rules::flake8_type_checking;
-use crate::settings::LinterSettings;
+use ruff_linter_settings::LinterSettings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum AnnotationContext {
@@ -39,7 +38,7 @@ impl AnnotationContext {
         // runtime-required, treat the annotation as runtime-required.
         match semantic.current_scope().kind {
             ScopeKind::Class(class_def)
-                if flake8_type_checking::helpers::runtime_required_class(
+                if ruff_rule_flake8_type_checking::helpers::runtime_required_class(
                     class_def,
                     &settings.flake8_type_checking.runtime_required_base_classes,
                     &settings.flake8_type_checking.runtime_required_decorators,
@@ -49,7 +48,7 @@ impl AnnotationContext {
                 return Self::RuntimeRequired
             }
             ScopeKind::Function(function_def)
-                if flake8_type_checking::helpers::runtime_required_function(
+                if ruff_rule_flake8_type_checking::helpers::runtime_required_function(
                     function_def,
                     &settings.flake8_type_checking.runtime_required_decorators,
                     semantic,
@@ -87,7 +86,7 @@ impl AnnotationContext {
         settings: &LinterSettings,
         version: PythonVersion,
     ) -> Self {
-        if flake8_type_checking::helpers::runtime_required_function(
+        if ruff_rule_flake8_type_checking::helpers::runtime_required_function(
             function_def,
             &settings.flake8_type_checking.runtime_required_decorators,
             semantic,

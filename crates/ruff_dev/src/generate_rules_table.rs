@@ -3,14 +3,14 @@
 //! Used for <https://docs.astral.sh/ruff/rules/>.
 
 use itertools::Itertools;
-use ruff_linter::codes::RuleGroup;
+use ruff_codes::codes::RuleGroup;
 use std::borrow::Cow;
 use std::fmt::Write;
 use strum::IntoEnumIterator;
 
 use ruff_diagnostics::FixAvailability;
-use ruff_linter::registry::{Linter, Rule, RuleNamespace};
-use ruff_linter::upstream_categories::UpstreamCategoryAndPrefix;
+use ruff_codes::{Linter, Rule, RuleNamespace};
+use ruff_codes::upstream_categories::UpstreamCategoryAndPrefix;
 use ruff_options_metadata::OptionsMetadata;
 use ruff_workspace::options::Options;
 

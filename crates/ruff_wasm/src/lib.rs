@@ -1,20 +1,20 @@
 use std::path::Path;
 
 use js_sys::Error;
-use ruff_linter::message::{DiagnosticMessage, Message};
-use ruff_linter::settings::types::PythonVersion;
+use ruff_linter_message::{DiagnosticMessage, Message};
+use ruff_codes::types::PythonVersion;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use ruff_formatter::printer::SourceMapGeneration;
 use ruff_formatter::{FormatResult, Formatted, IndentStyle};
-use ruff_linter::directives;
-use ruff_linter::line_width::{IndentWidth, LineLength};
+use ruff_linter_directives::{self as directives};
+use ruff_linter_commons::line_width::{IndentWidth, LineLength};
 use ruff_linter::linter::check_path;
-use ruff_linter::registry::AsRule;
-use ruff_linter::settings::{flags, DEFAULT_SELECTORS, DUMMY_VARIABLE_RGX};
-use ruff_linter::source_kind::SourceKind;
-use ruff_linter::Locator;
+use ruff_codes::AsRule;
+use ruff_linter_settings::{flags, DEFAULT_SELECTORS, DUMMY_VARIABLE_RGX};
+use ruff_linter_commons::source_kind::SourceKind;
+use ruff_linter_commons::Locator;
 use ruff_python_ast::{Mod, PySourceType};
 use ruff_python_codegen::Stylist;
 use ruff_python_formatter::{format_module_ast, pretty_comments, PyFormatContext, QuoteStyle};

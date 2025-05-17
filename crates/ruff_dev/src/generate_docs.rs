@@ -11,7 +11,7 @@ use regex::{Captures, Regex};
 use strum::IntoEnumIterator;
 
 use ruff_diagnostics::FixAvailability;
-use ruff_linter::registry::{Linter, Rule, RuleNamespace};
+use ruff_codes::{Linter, Rule, RuleNamespace};
 use ruff_options_metadata::{OptionEntry, OptionsMetadata};
 use ruff_workspace::options::Options;
 

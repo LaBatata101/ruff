@@ -7,8 +7,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use ignore::{WalkBuilder, WalkState};
 
-use ruff_linter::settings::types::GlobPath;
-use ruff_linter::{settings::types::FilePattern, settings::types::PreviewMode};
+use ruff_codes::types::{GlobPath, FilePattern, PreviewMode};
 use ruff_workspace::pyproject::find_fallback_target_version;
 use ruff_workspace::resolver::match_exclusion;
 use ruff_workspace::Settings;
@@ -507,7 +506,7 @@ impl ConfigurationTransformer for IdentityTransformer {
 
 #[cfg(test)]
 mod tests {
-    use ruff_linter::line_width::LineLength;
+    use ruff_linter_commons::line_width::LineLength;
     use ruff_workspace::options::Options;
 
     use super::*;

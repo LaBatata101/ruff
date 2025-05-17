@@ -10,7 +10,7 @@ use crate::binding::BindingId;
 use crate::globals::GlobalsId;
 use crate::star_import::StarImport;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Scope<'a> {
     /// The kind of scope.
     pub kind: ScopeKind<'a>,
@@ -166,7 +166,7 @@ bitflags! {
     }
 }
 
-#[derive(Debug, is_macro::Is)]
+#[derive(Debug, Clone, is_macro::Is)]
 pub enum ScopeKind<'a> {
     Class(&'a ast::StmtClassDef),
     Function(&'a ast::StmtFunctionDef),
@@ -210,7 +210,7 @@ impl ScopeId {
 }
 
 /// The scopes of a program indexed by [`ScopeId`]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Scopes<'a>(IndexVec<ScopeId, Scope<'a>>);
 
 impl<'a> Scopes<'a> {

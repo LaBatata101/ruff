@@ -14,10 +14,10 @@ use log::warn;
 use notify::{recommended_watcher, RecursiveMode, Watcher};
 
 use args::{GlobalConfigArgs, ServerCommand};
-use ruff_linter::logging::{set_up_logging, LogLevel};
-use ruff_linter::settings::flags::FixMode;
-use ruff_linter::settings::types::OutputFormat;
-use ruff_linter::{fs, warn_user, warn_user_once};
+use ruff_linter_commons::logging::{set_up_logging, LogLevel};
+use ruff_linter_settings::flags::FixMode;
+use ruff_codes::types::OutputFormat;
+use ruff_linter_commons::{fs, warn_user, warn_user_once};
 use ruff_workspace::Settings;
 
 use crate::args::{

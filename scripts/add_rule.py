@@ -95,7 +95,7 @@ def main(*, name: str, prefix: str, code: str, linter: str) -> None:
 use ruff_diagnostics::Violation;
 use ruff_macros::{{derive_message_formats, ViolationMetadata}};
 
-use crate::checkers::ast::Checker;
+use ruff_linter_checkers::ast::CheckerSnapshot;
 
 /// ## What it does
 ///

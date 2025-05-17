@@ -1,20 +1,21 @@
 use ruff_diagnostics::Diagnostic;
+use ruff_linter_checkers::logical_lines::LogicalLinesContext;
 use ruff_python_codegen::Stylist;
 use ruff_python_index::Indexer;
 use ruff_python_parser::{TokenKind, Tokens};
 use ruff_source_file::LineRanges;
 use ruff_text_size::{Ranged, TextRange};
 
-use crate::line_width::IndentWidth;
-use crate::registry::{AsRule, Rule};
-use crate::rules::pycodestyle::rules::logical_lines::{
+use ruff_linter_commons::line_width::IndentWidth;
+use ruff_codes::{AsRule, Rule};
+use ruff_rule_pycodestyle::rules::logical_lines::{
     extraneous_whitespace, indentation, missing_whitespace, missing_whitespace_after_keyword,
     missing_whitespace_around_operator, redundant_backslash, space_after_comma,
     space_around_operator, whitespace_around_keywords, whitespace_around_named_parameter_equals,
     whitespace_before_comment, whitespace_before_parameters, LogicalLines, TokenFlags,
 };
-use crate::settings::LinterSettings;
-use crate::Locator;
+use ruff_linter_settings::LinterSettings;
+use ruff_linter_commons::Locator;
 
 /// Return the amount of indentation, expanding tabs to the next multiple of the settings' tab size.
 pub(crate) fn expand_indent(line: &str, indent_width: IndentWidth) -> usize {
@@ -190,25 +191,4 @@ pub(crate) fn check_logical_lines(
         }
     }
     context.diagnostics
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct LogicalLinesContext<'a> {
-    settings: &'a LinterSettings,
-    diagnostics: Vec<Diagnostic>,
-}
-
-impl<'a> LogicalLinesContext<'a> {
-    fn new(settings: &'a LinterSettings) -> Self {
-        Self {
-            settings,
-            diagnostics: Vec::new(),
-        }
-    }
-
-    pub(crate) fn push_diagnostic(&mut self, diagnostic: Diagnostic) {
-        if self.settings.rules.enabled(diagnostic.rule()) {
-            self.diagnostics.push(diagnostic);
-        }
-    }
 }

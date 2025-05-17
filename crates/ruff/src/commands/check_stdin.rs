@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use anyhow::Result;
-use ruff_linter::package::PackageRoot;
-use ruff_linter::packaging;
-use ruff_linter::settings::flags;
+use ruff_linter_commons::package::PackageRoot;
+use ruff_linter_commons::packaging;
+use ruff_linter_settings::flags;
 use ruff_workspace::resolver::{match_exclusion, python_file_at_path, PyprojectConfig, Resolver};
 
 use crate::args::ConfigArguments;

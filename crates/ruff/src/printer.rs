@@ -9,17 +9,17 @@ use colored::Colorize;
 use itertools::{iterate, Itertools};
 use serde::Serialize;
 
-use ruff_linter::fs::relativize_path;
-use ruff_linter::logging::LogLevel;
-use ruff_linter::message::{
+use ruff_linter_commons::fs::relativize_path;
+use ruff_linter_commons::logging::LogLevel;
+use ruff_linter_message::{
     AzureEmitter, Emitter, EmitterContext, GithubEmitter, GitlabEmitter, GroupedEmitter,
     JsonEmitter, JsonLinesEmitter, JunitEmitter, Message, MessageKind, PylintEmitter,
     RdjsonEmitter, SarifEmitter, TextEmitter,
 };
-use ruff_linter::notify_user;
-use ruff_linter::registry::Rule;
-use ruff_linter::settings::flags::{self};
-use ruff_linter::settings::types::{OutputFormat, UnsafeFixes};
+use ruff_linter_commons::notify_user;
+use ruff_codes::Rule;
+use ruff_linter_settings::flags::{self};
+use ruff_codes::types::{OutputFormat, UnsafeFixes};
 
 use crate::diagnostics::{Diagnostics, FixMap};
 

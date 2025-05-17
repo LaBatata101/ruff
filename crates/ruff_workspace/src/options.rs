@@ -7,29 +7,30 @@ use std::path::PathBuf;
 use strum::IntoEnumIterator;
 
 use crate::settings::LineEnding;
+use ruff_codes::rule_selector::RuleSelector;
+use ruff_codes::rules::flake8_pytest_style::types;
+use ruff_codes::rules::flake8_tidy_imports::Strictness;
+use ruff_codes::rules::isort::{ImportSection, ImportType, KnownModules};
 use ruff_formatter::IndentStyle;
 use ruff_graph::Direction;
-use ruff_linter::line_width::{IndentWidth, LineLength};
-use ruff_linter::rules::flake8_import_conventions::settings::BannedAliases;
-use ruff_linter::rules::flake8_pytest_style::settings::SettingsError;
-use ruff_linter::rules::flake8_pytest_style::types;
-use ruff_linter::rules::flake8_quotes::settings::Quote;
-use ruff_linter::rules::flake8_tidy_imports::settings::{ApiBan, Strictness};
-use ruff_linter::rules::isort::settings::RelativeImportsOrder;
-use ruff_linter::rules::isort::{ImportSection, ImportType};
-use ruff_linter::rules::pep8_naming::settings::IgnoreNames;
-use ruff_linter::rules::pydocstyle::settings::Convention;
-use ruff_linter::rules::pylint::settings::ConstantType;
-use ruff_linter::rules::{
+use ruff_linter_settings::rules::flake8_import_conventions::BannedAliases;
+use ruff_linter_settings::rules::flake8_pytest_style::SettingsError;
+use ruff_linter_settings::rules::flake8_quotes::Quote;
+use ruff_linter_settings::rules::flake8_tidy_imports::ApiBan;
+use ruff_linter_settings::rules::isort::RelativeImportsOrder;
+use ruff_linter_settings::rules::pep8_naming::IgnoreNames;
+use ruff_linter_settings::rules::pydocstyle::Convention;
+use ruff_linter_settings::rules::pylint::ConstantType;
+use ruff_linter_settings::rules::{
     flake8_copyright, flake8_errmsg, flake8_gettext, flake8_implicit_str_concat,
     flake8_import_conventions, flake8_pytest_style, flake8_quotes, flake8_self,
     flake8_tidy_imports, flake8_type_checking, flake8_unused_arguments, isort, mccabe, pep8_naming,
     pycodestyle, pydoclint, pydocstyle, pyflakes, pylint, pyupgrade, ruff,
 };
-use ruff_linter::settings::types::{
-    IdentifierPattern, OutputFormat, PythonVersion, RequiredVersion,
-};
-use ruff_linter::{warn_user_once, RuleSelector};
+
+use ruff_codes::types::{IdentifierPattern, OutputFormat, PythonVersion, RequiredVersion};
+use ruff_linter_commons::line_width::{IndentWidth, LineLength};
+use ruff_linter_commons::warn_user_once;
 use ruff_macros::{CombineOptions, OptionsMetadata};
 use ruff_options_metadata::{OptionsMetadata, Visit};
 use ruff_python_ast::name::Name;
@@ -1044,8 +1045,8 @@ pub struct Flake8AnnotationsOptions {
 }
 
 impl Flake8AnnotationsOptions {
-    pub fn into_settings(self) -> ruff_linter::rules::flake8_annotations::settings::Settings {
-        ruff_linter::rules::flake8_annotations::settings::Settings {
+    pub fn into_settings(self) -> ruff_linter_settings::rules::flake8_annotations::Settings {
+        ruff_linter_settings::rules::flake8_annotations::Settings {
             mypy_init_return: self.mypy_init_return.unwrap_or(false),
             suppress_dummy_args: self.suppress_dummy_args.unwrap_or(false),
             suppress_none_returning: self.suppress_none_returning.unwrap_or(false),
@@ -1138,11 +1139,11 @@ impl Flake8BanditOptions {
     pub fn into_settings(
         self,
         ruff_options: Option<&RuffOptions>,
-    ) -> ruff_linter::rules::flake8_bandit::settings::Settings {
-        ruff_linter::rules::flake8_bandit::settings::Settings {
+    ) -> ruff_linter_settings::rules::flake8_bandit::Settings {
+        ruff_linter_settings::rules::flake8_bandit::Settings {
             hardcoded_tmp_directory: self
                 .hardcoded_tmp_directory
-                .unwrap_or_else(ruff_linter::rules::flake8_bandit::settings::default_tmp_dirs)
+                .unwrap_or_else(ruff_linter_settings::rules::flake8_bandit::default_tmp_dirs)
                 .into_iter()
                 .chain(self.hardcoded_tmp_directory_extend.unwrap_or_default())
                 .collect(),
@@ -1185,8 +1186,8 @@ pub struct Flake8BooleanTrapOptions {
 }
 
 impl Flake8BooleanTrapOptions {
-    pub fn into_settings(self) -> ruff_linter::rules::flake8_boolean_trap::settings::Settings {
-        ruff_linter::rules::flake8_boolean_trap::settings::Settings {
+    pub fn into_settings(self) -> ruff_linter_settings::rules::flake8_boolean_trap::Settings {
+        ruff_linter_settings::rules::flake8_boolean_trap::Settings {
             extend_allowed_calls: self.extend_allowed_calls.unwrap_or_default(),
         }
     }
@@ -1217,8 +1218,8 @@ pub struct Flake8BugbearOptions {
 }
 
 impl Flake8BugbearOptions {
-    pub fn into_settings(self) -> ruff_linter::rules::flake8_bugbear::settings::Settings {
-        ruff_linter::rules::flake8_bugbear::settings::Settings {
+    pub fn into_settings(self) -> ruff_linter_settings::rules::flake8_bugbear::Settings {
+        ruff_linter_settings::rules::flake8_bugbear::Settings {
             extend_immutable_calls: self.extend_immutable_calls.unwrap_or_default(),
         }
     }
@@ -1307,9 +1308,9 @@ pub struct Flake8BuiltinsOptions {
 }
 
 impl Flake8BuiltinsOptions {
-    pub fn into_settings(self) -> ruff_linter::rules::flake8_builtins::settings::Settings {
+    pub fn into_settings(self) -> ruff_linter_settings::rules::flake8_builtins::Settings {
         #[expect(deprecated)]
-        ruff_linter::rules::flake8_builtins::settings::Settings {
+        ruff_linter_settings::rules::flake8_builtins::Settings {
             ignorelist: self
                 .ignorelist
                 .or(self.builtins_ignorelist)
@@ -1344,8 +1345,8 @@ pub struct Flake8ComprehensionsOptions {
 }
 
 impl Flake8ComprehensionsOptions {
-    pub fn into_settings(self) -> ruff_linter::rules::flake8_comprehensions::settings::Settings {
-        ruff_linter::rules::flake8_comprehensions::settings::Settings {
+    pub fn into_settings(self) -> ruff_linter_settings::rules::flake8_comprehensions::Settings {
+        ruff_linter_settings::rules::flake8_comprehensions::Settings {
             allow_dict_calls_with_keyword_arguments: self
                 .allow_dict_calls_with_keyword_arguments
                 .unwrap_or_default(),
@@ -1396,13 +1397,13 @@ pub struct Flake8CopyrightOptions {
 }
 
 impl Flake8CopyrightOptions {
-    pub fn try_into_settings(self) -> anyhow::Result<flake8_copyright::settings::Settings> {
-        Ok(flake8_copyright::settings::Settings {
+    pub fn try_into_settings(self) -> anyhow::Result<flake8_copyright::Settings> {
+        Ok(flake8_copyright::Settings {
             notice_rgx: self
                 .notice_rgx
                 .map(|pattern| Regex::new(&pattern))
                 .transpose()?
-                .unwrap_or_else(|| flake8_copyright::settings::COPYRIGHT.clone()),
+                .unwrap_or_else(|| flake8_copyright::COPYRIGHT.clone()),
             author: self.author,
             min_file_size: self.min_file_size.unwrap_or_default(),
         })
@@ -1422,8 +1423,8 @@ pub struct Flake8ErrMsgOptions {
 }
 
 impl Flake8ErrMsgOptions {
-    pub fn into_settings(self) -> flake8_errmsg::settings::Settings {
-        flake8_errmsg::settings::Settings {
+    pub fn into_settings(self) -> flake8_errmsg::Settings {
+        flake8_errmsg::Settings {
             max_string_length: self.max_string_length.unwrap_or_default(),
         }
     }
@@ -1455,11 +1456,11 @@ pub struct Flake8GetTextOptions {
 }
 
 impl Flake8GetTextOptions {
-    pub fn into_settings(self) -> flake8_gettext::settings::Settings {
-        flake8_gettext::settings::Settings {
+    pub fn into_settings(self) -> flake8_gettext::Settings {
+        flake8_gettext::Settings {
             functions_names: self
                 .function_names
-                .unwrap_or_else(flake8_gettext::settings::default_func_names)
+                .unwrap_or_else(flake8_gettext::default_func_names)
                 .into_iter()
                 .chain(self.extend_function_names.unwrap_or_default())
                 .collect(),
@@ -1495,8 +1496,8 @@ pub struct Flake8ImplicitStrConcatOptions {
 }
 
 impl Flake8ImplicitStrConcatOptions {
-    pub fn into_settings(self) -> flake8_implicit_str_concat::settings::Settings {
-        flake8_implicit_str_concat::settings::Settings {
+    pub fn into_settings(self) -> flake8_implicit_str_concat::Settings {
+        flake8_implicit_str_concat::Settings {
             allow_multiline: self.allow_multiline.unwrap_or(true),
         }
     }
@@ -1632,13 +1633,13 @@ impl<'de> Deserialize<'de> for Alias {
 }
 
 impl Flake8ImportConventionsOptions {
-    pub fn into_settings(self) -> flake8_import_conventions::settings::Settings {
+    pub fn into_settings(self) -> flake8_import_conventions::Settings {
         let mut aliases: FxHashMap<String, String> = match self.aliases {
             Some(options_aliases) => options_aliases
                 .into_iter()
                 .map(|(module, alias)| (module.into_string(), alias.into_string()))
                 .collect(),
-            None => flake8_import_conventions::settings::default_aliases(),
+            None => flake8_import_conventions::default_aliases(),
         };
         if let Some(extend_aliases) = self.extend_aliases {
             aliases.extend(
@@ -1648,7 +1649,7 @@ impl Flake8ImportConventionsOptions {
             );
         }
 
-        flake8_import_conventions::settings::Settings {
+        flake8_import_conventions::Settings {
             aliases,
             banned_aliases: self.banned_aliases.unwrap_or_default(),
             banned_from: self.banned_from.unwrap_or_default(),
@@ -1792,8 +1793,8 @@ pub struct Flake8PytestStyleOptions {
 }
 
 impl Flake8PytestStyleOptions {
-    pub fn try_into_settings(self) -> anyhow::Result<flake8_pytest_style::settings::Settings> {
-        Ok(flake8_pytest_style::settings::Settings {
+    pub fn try_into_settings(self) -> anyhow::Result<flake8_pytest_style::Settings> {
+        Ok(flake8_pytest_style::Settings {
             fixture_parentheses: self.fixture_parentheses.unwrap_or_default(),
             parametrize_names_type: self.parametrize_names_type.unwrap_or_default(),
             parametrize_values_type: self.parametrize_values_type.unwrap_or_default(),
@@ -1808,7 +1809,7 @@ impl Flake8PytestStyleOptions {
                 })
                 .transpose()
                 .map_err(SettingsError::InvalidRaisesRequireMatchFor)?
-                .unwrap_or_else(flake8_pytest_style::settings::default_broad_exceptions),
+                .unwrap_or_else(flake8_pytest_style::default_broad_exceptions),
             raises_extend_require_match_for: self
                 .raises_extend_require_match_for
                 .map(|patterns| {
@@ -1831,7 +1832,7 @@ impl Flake8PytestStyleOptions {
                 })
                 .transpose()
                 .map_err(SettingsError::InvalidWarnsRequireMatchFor)?
-                .unwrap_or_else(flake8_pytest_style::settings::default_broad_warnings),
+                .unwrap_or_else(flake8_pytest_style::default_broad_warnings),
             warns_extend_require_match_for: self
                 .warns_extend_require_match_for
                 .map(|patterns| {
@@ -1910,8 +1911,8 @@ pub struct Flake8QuotesOptions {
 }
 
 impl Flake8QuotesOptions {
-    pub fn into_settings(self) -> flake8_quotes::settings::Settings {
-        flake8_quotes::settings::Settings {
+    pub fn into_settings(self) -> flake8_quotes::Settings {
+        flake8_quotes::Settings {
             inline_quotes: self.inline_quotes.unwrap_or_default(),
             multiline_quotes: self.multiline_quotes.unwrap_or_default(),
             docstring_quotes: self.docstring_quotes.unwrap_or_default(),
@@ -1948,9 +1949,9 @@ pub struct Flake8SelfOptions {
 }
 
 impl Flake8SelfOptions {
-    pub fn into_settings(self) -> flake8_self::settings::Settings {
-        let defaults = flake8_self::settings::Settings::default();
-        flake8_self::settings::Settings {
+    pub fn into_settings(self) -> flake8_self::Settings {
+        let defaults = flake8_self::Settings::default();
+        flake8_self::Settings {
             ignore_names: self
                 .ignore_names
                 .unwrap_or(defaults.ignore_names)
@@ -2010,8 +2011,8 @@ pub struct Flake8TidyImportsOptions {
 }
 
 impl Flake8TidyImportsOptions {
-    pub fn into_settings(self) -> flake8_tidy_imports::settings::Settings {
-        flake8_tidy_imports::settings::Settings {
+    pub fn into_settings(self) -> flake8_tidy_imports::Settings {
+        flake8_tidy_imports::Settings {
             ban_relative_imports: self.ban_relative_imports.unwrap_or(Strictness::Parents),
             banned_api: self.banned_api.unwrap_or_default(),
             banned_module_level_imports: self.banned_module_level_imports.unwrap_or_default(),
@@ -2151,8 +2152,8 @@ pub struct Flake8TypeCheckingOptions {
 }
 
 impl Flake8TypeCheckingOptions {
-    pub fn into_settings(self) -> flake8_type_checking::settings::Settings {
-        flake8_type_checking::settings::Settings {
+    pub fn into_settings(self) -> flake8_type_checking::Settings {
+        flake8_type_checking::Settings {
             strict: self.strict.unwrap_or(false),
             exempt_modules: self
                 .exempt_modules
@@ -2181,8 +2182,8 @@ pub struct Flake8UnusedArgumentsOptions {
 }
 
 impl Flake8UnusedArgumentsOptions {
-    pub fn into_settings(self) -> flake8_unused_arguments::settings::Settings {
-        flake8_unused_arguments::settings::Settings {
+    pub fn into_settings(self) -> flake8_unused_arguments::Settings {
+        flake8_unused_arguments::Settings {
             ignore_variadic_names: self.ignore_variadic_names.unwrap_or_default(),
         }
     }
@@ -2651,9 +2652,7 @@ pub struct IsortOptions {
 }
 
 impl IsortOptions {
-    pub fn try_into_settings(
-        self,
-    ) -> Result<isort::settings::Settings, isort::settings::SettingsError> {
+    pub fn try_into_settings(self) -> Result<isort::Settings, isort::SettingsError> {
         // Verify that if `no_sections` is set, then `section_order` is empty.
         let no_sections = self.no_sections.unwrap_or_default();
         if no_sections && self.section_order.is_some() {
@@ -2690,7 +2689,7 @@ impl IsortOptions {
                     .collect()
             })
             .transpose()
-            .map_err(isort::settings::SettingsError::InvalidKnownFirstParty)?
+            .map_err(isort::SettingsError::InvalidKnownFirstParty)?
             .unwrap_or_default();
         let known_third_party = self
             .known_third_party
@@ -2701,7 +2700,7 @@ impl IsortOptions {
                     .collect()
             })
             .transpose()
-            .map_err(isort::settings::SettingsError::InvalidKnownThirdParty)?
+            .map_err(isort::SettingsError::InvalidKnownThirdParty)?
             .unwrap_or_default();
         let known_local_folder = self
             .known_local_folder
@@ -2712,7 +2711,7 @@ impl IsortOptions {
                     .collect()
             })
             .transpose()
-            .map_err(isort::settings::SettingsError::InvalidKnownLocalFolder)?
+            .map_err(isort::SettingsError::InvalidKnownLocalFolder)?
             .unwrap_or_default();
         let extra_standard_library = self
             .extra_standard_library
@@ -2723,7 +2722,7 @@ impl IsortOptions {
                     .collect()
             })
             .transpose()
-            .map_err(isort::settings::SettingsError::InvalidExtraStandardLibrary)?
+            .map_err(isort::SettingsError::InvalidExtraStandardLibrary)?
             .unwrap_or_default();
         let no_lines_before = self.no_lines_before.unwrap_or_default();
         let from_first = self.from_first.unwrap_or_default();
@@ -2744,9 +2743,9 @@ impl IsortOptions {
                     .into_iter()
                     .map(|module| {
                         IdentifierPattern::new(&module)
-                            .map_err(isort::settings::SettingsError::InvalidUserDefinedSection)
+                            .map_err(isort::SettingsError::InvalidUserDefinedSection)
                     })
-                    .collect::<Result<Vec<_>, isort::settings::SettingsError>>()?;
+                    .collect::<Result<Vec<_>, isort::SettingsError>>()?;
                 Ok((section, modules))
             })
             .collect::<Result<_, _>>()?;
@@ -2792,7 +2791,7 @@ impl IsortOptions {
             section_order.push(default_section.clone());
         }
 
-        Ok(isort::settings::Settings {
+        Ok(isort::Settings {
             required_imports: self
                 .required_imports
                 .unwrap_or_default()
@@ -2806,7 +2805,7 @@ impl IsortOptions {
             force_wrap_aliases: self.force_wrap_aliases.unwrap_or(false),
             detect_same_package: self.detect_same_package.unwrap_or(true),
             force_to_top: FxHashSet::from_iter(self.force_to_top.unwrap_or_default()),
-            known_modules: isort::categorize::KnownModules::new(
+            known_modules: KnownModules::new(
                 known_first_party,
                 known_third_party,
                 known_local_folder,
@@ -2856,11 +2855,11 @@ pub struct McCabeOptions {
 }
 
 impl McCabeOptions {
-    pub fn into_settings(self) -> mccabe::settings::Settings {
-        mccabe::settings::Settings {
+    pub fn into_settings(self) -> mccabe::Settings {
+        mccabe::Settings {
             max_complexity: self
                 .max_complexity
-                .unwrap_or(mccabe::settings::DEFAULT_MAX_COMPLEXITY),
+                .unwrap_or(mccabe::DEFAULT_MAX_COMPLEXITY),
         }
     }
 }
@@ -2947,10 +2946,8 @@ pub struct Pep8NamingOptions {
 }
 
 impl Pep8NamingOptions {
-    pub fn try_into_settings(
-        self,
-    ) -> Result<pep8_naming::settings::Settings, pep8_naming::settings::SettingsError> {
-        Ok(pep8_naming::settings::Settings {
+    pub fn try_into_settings(self) -> Result<pep8_naming::Settings, pep8_naming::SettingsError> {
+        Ok(pep8_naming::Settings {
             ignore_names: IgnoreNames::from_options(self.ignore_names, self.extend_ignore_names)?,
             classmethod_decorators: self.classmethod_decorators.unwrap_or_default(),
             staticmethod_decorators: self.staticmethod_decorators.unwrap_or_default(),
@@ -3024,8 +3021,8 @@ pub struct PycodestyleOptions {
 }
 
 impl PycodestyleOptions {
-    pub fn into_settings(self, global_line_length: LineLength) -> pycodestyle::settings::Settings {
-        pycodestyle::settings::Settings {
+    pub fn into_settings(self, global_line_length: LineLength) -> pycodestyle::Settings {
+        pycodestyle::Settings {
             max_doc_length: self.max_doc_length,
             max_line_length: self.max_line_length.unwrap_or(global_line_length),
             ignore_overlong_task_comments: self.ignore_overlong_task_comments.unwrap_or_default(),
@@ -3125,14 +3122,14 @@ pub struct PydocstyleOptions {
 }
 
 impl PydocstyleOptions {
-    pub fn into_settings(self) -> pydocstyle::settings::Settings {
+    pub fn into_settings(self) -> pydocstyle::Settings {
         let PydocstyleOptions {
             convention,
             ignore_decorators,
             property_decorators,
             ignore_var_parameters: ignore_variadics,
         } = self;
-        pydocstyle::settings::Settings {
+        pydocstyle::Settings {
             convention,
             ignore_decorators: BTreeSet::from_iter(ignore_decorators.unwrap_or_default()),
             property_decorators: BTreeSet::from_iter(property_decorators.unwrap_or_default()),
@@ -3164,8 +3161,8 @@ pub struct PydoclintOptions {
 }
 
 impl PydoclintOptions {
-    pub fn into_settings(self) -> pydoclint::settings::Settings {
-        pydoclint::settings::Settings {
+    pub fn into_settings(self) -> pydoclint::Settings {
+        pydoclint::Settings {
             ignore_one_line_docstrings: self.ignore_one_line_docstrings.unwrap_or_default(),
         }
     }
@@ -3208,8 +3205,8 @@ pub struct PyflakesOptions {
 }
 
 impl PyflakesOptions {
-    pub fn into_settings(self) -> pyflakes::settings::Settings {
-        pyflakes::settings::Settings {
+    pub fn into_settings(self) -> pyflakes::Settings {
+        pyflakes::Settings {
             extend_generics: self.extend_generics.unwrap_or_default(),
             allowed_unused_imports: self.allowed_unused_imports.unwrap_or_default(),
         }
@@ -3301,9 +3298,9 @@ pub struct PylintOptions {
 }
 
 impl PylintOptions {
-    pub fn into_settings(self) -> pylint::settings::Settings {
-        let defaults = pylint::settings::Settings::default();
-        pylint::settings::Settings {
+    pub fn into_settings(self) -> pylint::Settings {
+        let defaults = pylint::Settings::default();
+        pylint::Settings {
             allow_magic_value_types: self
                 .allow_magic_value_types
                 .unwrap_or(defaults.allow_magic_value_types),
@@ -3375,8 +3372,8 @@ pub struct PyUpgradeOptions {
 }
 
 impl PyUpgradeOptions {
-    pub fn into_settings(self) -> pyupgrade::settings::Settings {
-        pyupgrade::settings::Settings {
+    pub fn into_settings(self) -> pyupgrade::Settings {
+        pyupgrade::Settings {
             keep_runtime_typing: self.keep_runtime_typing.unwrap_or_default(),
         }
     }
@@ -3455,8 +3452,8 @@ pub struct RuffOptions {
 }
 
 impl RuffOptions {
-    pub fn into_settings(self) -> ruff::settings::Settings {
-        ruff::settings::Settings {
+    pub fn into_settings(self) -> ruff::Settings {
+        ruff::Settings {
             parenthesize_tuple_in_subscript: self
                 .parenthesize_tuple_in_subscript
                 .unwrap_or_default(),
@@ -4011,12 +4008,12 @@ impl From<LintOptionsWire> for LintOptions {
 #[cfg(test)]
 mod tests {
     use crate::options::Flake8SelfOptions;
-    use ruff_linter::rules::flake8_self;
+    use ruff_linter_settings::rules::flake8_self;
     use ruff_python_ast::name::Name;
 
     #[test]
     fn flake8_self_options() {
-        let default_settings = flake8_self::settings::Settings::default();
+        let default_settings = flake8_self::Settings::default();
 
         // Uses defaults if no options are specified.
         let options = Flake8SelfOptions {

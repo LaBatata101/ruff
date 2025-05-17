@@ -30,8 +30,8 @@ use tracing_subscriber::EnvFilter;
 use ruff::args::{ConfigArguments, FormatArguments, FormatCommand, GlobalConfigArgs, LogLevelArgs};
 use ruff::resolve::resolve;
 use ruff_formatter::{FormatError, LineWidth, PrintError};
-use ruff_linter::logging::LogLevel;
-use ruff_linter::settings::types::{FilePattern, FilePatternSet};
+use ruff_linter_commons::logging::LogLevel;
+use ruff_codes::types::{FilePattern, FilePatternSet};
 use ruff_python_formatter::{
     format_module_source, FormatModuleError, MagicTrailingComma, PreviewMode, PyFormatOptions,
 };

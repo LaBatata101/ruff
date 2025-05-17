@@ -1,0 +1,38 @@
+[package]
+name = "ruff_linter_fix"
+version = "0.0.0"
+publish = false
+authors = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+
+[lib]
+
+[dependencies]
+ruff_diagnostics = { workspace = true }
+ruff_text_size = { workspace = true }
+ruff_python_ast = { workspace = true }
+ruff_python_trivia = { workspace = true }
+ruff_python_codegen = { workspace = true }
+ruff_python_index = { workspace = true }
+ruff_source_file = { workspace = true }
+ruff_python_parser = { workspace = true }
+ruff_python_semantic = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_commons = { workspace = true }
+ruff_linter_message = { workspace = true }
+
+anyhow = { workspace = true }
+unicode-width = { workspace = true }
+unicode-normalization = { workspace = true }
+itertools = { workspace = true }
+rustc-hash = { workspace = true }
+smallvec = { workspace = true }
+libcst = { workspace = true }
+
+[dev-dependencies]
+test-case = { workspace = true }

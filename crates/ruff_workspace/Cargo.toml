@@ -16,7 +16,6 @@ license = { workspace = true }
 ruff_cache = { workspace = true }
 ruff_formatter = { workspace = true }
 ruff_graph = { workspace = true, features = ["serde", "schemars"] }
-ruff_linter = { workspace = true }
 ruff_macros = { workspace = true }
 ruff_options_metadata = { workspace = true }
 ruff_python_ast = { workspace = true }
@@ -24,6 +23,10 @@ ruff_python_formatter = { workspace = true, features = ["serde"] }
 ruff_python_semantic = { workspace = true, features = ["serde"] }
 ruff_python_stdlib = { workspace = true }
 ruff_source_file = { workspace = true }
+ruff_linter_settings = { workspace = true, features = ["schemars"] }
+ruff_linter_macros = { workspace = true }
+ruff_linter_commons = { workspace = true, features = ["schemars"] }
+ruff_codes = { workspace = true, features = ["schemars"] }
 
 anyhow = { workspace = true }
 colored = { workspace = true }

@@ -1,0 +1,53 @@
+[package]
+name = "ruff_codes"
+version = "0.0.0"
+publish = false
+authors = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+
+[dependencies]
+ruff_diagnostics = { workspace = true }
+ruff_macros = { workspace = true }
+ruff_cache = { workspace = true }
+ruff_python_ast = { workspace = true }
+ruff_python_semantic = { workspace = true }
+ruff_python_stdlib = { workspace = true }
+ruff_linter_macros = { workspace = true }
+ruff_linter_commons = { workspace = true }
+ruff_python_parser = { workspace = true }
+ruff_source_file = { workspace = true }
+
+anyhow = { workspace = true }
+globset = { workspace = true }
+glob = { workspace = true }
+pep440_rs = { workspace = true }
+rustc-hash = { workspace = true }
+schemars = { workspace = true, optional = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thiserror = { workspace = true }
+is-macro = { workspace = true }
+serde = { workspace = true }
+itertools = { workspace = true }
+clap = { workspace = true, optional = true, features = ["derive"] }
+log = { workspace = true }
+colored = { workspace = true }
+unicode_names2 = { workspace = true }
+
+[dev-dependencies]
+glob = { workspace = true }
+tempfile = { workspace = true }
+
+[features]
+default = []
+schemars = ["dep:schemars", "ruff_python_ast/schemars"]
+# Enables rules for internal integration tests
+test-rules = []
+
+[lints]
+workspace = true

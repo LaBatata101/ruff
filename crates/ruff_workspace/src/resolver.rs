@@ -18,9 +18,9 @@ use path_absolutize::path_dedot;
 use path_slash::PathExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use ruff_linter::fs;
-use ruff_linter::package::PackageRoot;
-use ruff_linter::packaging::is_package;
+use ruff_linter_commons::fs;
+use ruff_linter_commons::package::PackageRoot;
+use ruff_linter_commons::packaging::is_package;
 
 use crate::configuration::Configuration;
 use crate::pyproject::{settings_toml, TargetVersionStrategy};
@@ -919,7 +919,7 @@ mod tests {
     use path_absolutize::Absolutize;
     use tempfile::TempDir;
 
-    use ruff_linter::settings::types::{FilePattern, GlobPath};
+    use ruff_codes::types::{FilePattern, GlobPath};
 
     use crate::configuration::Configuration;
     use crate::pyproject::find_settings_toml;

@@ -1,0 +1,23 @@
+[package]
+name = "ruff_rule_eradicate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ruff_linter_commons = { workspace = true }
+ruff_python_parser = { workspace = true }
+ruff_python_trivia = { workspace = true }
+ruff_text_size = { workspace = true }
+ruff_source_file = { workspace = true }
+ruff_macros = { workspace = true }
+ruff_diagnostics = { workspace = true }
+ruff_linter_settings = { workspace = true }
+
+aho-corasick = { workspace = true }
+itertools = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+test-case = { workspace = true }
+ruff_codes = { workspace = true }

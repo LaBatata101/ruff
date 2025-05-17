@@ -4,14 +4,13 @@ use ruff_diagnostics::Diagnostic;
 use ruff_python_ast::PythonVersion;
 use ruff_python_trivia::CommentRanges;
 
-use crate::package::PackageRoot;
-use crate::preview::is_allow_nested_roots_enabled;
-use crate::registry::Rule;
-use crate::rules::flake8_builtins::rules::stdlib_module_shadowing;
-use crate::rules::flake8_no_pep420::rules::implicit_namespace_package;
-use crate::rules::pep8_naming::rules::invalid_module_name;
-use crate::settings::LinterSettings;
-use crate::Locator;
+use ruff_linter_commons::{package::PackageRoot, Locator};
+use ruff_linter_settings::preview::is_allow_nested_roots_enabled;
+use ruff_codes::Rule;
+use ruff_rule_flake8_builtins::rules::stdlib_module_shadowing;
+use ruff_rule_flake8_no_pep420::rules::implicit_namespace_package;
+use ruff_rule_pep8_naming::rules::invalid_module_name;
+use ruff_linter_settings::LinterSettings;
 
 pub(crate) fn check_file_path(
     path: &Path,

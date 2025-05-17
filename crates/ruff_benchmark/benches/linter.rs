@@ -6,13 +6,14 @@ use criterion::{
 use ruff_benchmark::{
     TestCase, LARGE_DATASET, NUMPY_CTYPESLIB, NUMPY_GLOBALS, PYDANTIC_TYPES, UNICODE_PYPINYIN,
 };
+use ruff_codes::rule_selector::PreviewOptions;
+use ruff_codes::rule_selector::RuleSelector;
+use ruff_codes::Rule;
 use ruff_linter::linter::{lint_only, ParseSource};
-use ruff_linter::rule_selector::PreviewOptions;
-use ruff_linter::settings::rule_table::RuleTable;
-use ruff_linter::settings::types::PreviewMode;
-use ruff_linter::settings::{flags, LinterSettings};
-use ruff_linter::source_kind::SourceKind;
-use ruff_linter::{registry::Rule, RuleSelector};
+use ruff_linter_commons::source_kind::SourceKind;
+use ruff_linter_settings::rule_table::RuleTable;
+use ruff_codes::types::PreviewMode;
+use ruff_linter_settings::{flags, LinterSettings};
 use ruff_python_ast::PySourceType;
 use ruff_python_parser::parse_module;
 

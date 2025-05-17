@@ -9,19 +9,17 @@ use crate::{
     session::DocumentQuery,
     PositionEncoding, DIAGNOSTIC_NAME,
 };
+use ruff_codes::AsRule;
 use ruff_diagnostics::{Applicability, Edit, Fix};
-use ruff_linter::{
-    directives::{extract_directives, Flags},
-    generate_noqa_edits,
-    linter::check_path,
-    message::{DiagnosticMessage, Message},
-    package::PackageRoot,
-    packaging::detect_package_root,
-    registry::AsRule,
-    settings::flags,
-    source_kind::SourceKind,
-    Locator,
-};
+use ruff_linter::linter::check_path;
+use ruff_linter_commons::Locator;
+use ruff_linter_commons::package::PackageRoot;
+use ruff_linter_commons::packaging::detect_package_root;
+use ruff_linter_commons::source_kind::SourceKind;
+use ruff_linter_directives::{extract_directives, Flags};
+use ruff_linter_message::{DiagnosticMessage, Message};
+use ruff_linter_noqa::generate_noqa_edits;
+use ruff_linter_settings::flags;
 use ruff_notebook::Notebook;
 use ruff_python_codegen::Stylist;
 use ruff_python_index::Indexer;

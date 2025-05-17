@@ -6,16 +6,16 @@ use ruff_python_index::Indexer;
 use ruff_source_file::UniversalNewlines;
 use ruff_text_size::TextSize;
 
-use crate::registry::Rule;
-use crate::rules::flake8_copyright::rules::missing_copyright_notice;
-use crate::rules::pycodestyle::rules::{
+use ruff_codes::Rule;
+use ruff_rule_flake8_copyright::rules::missing_copyright_notice;
+use ruff_rule_pycodestyle::rules::{
     doc_line_too_long, line_too_long, mixed_spaces_and_tabs, no_newline_at_end_of_file,
     trailing_whitespace,
 };
-use crate::rules::pylint;
-use crate::rules::ruff::rules::indented_form_feed;
-use crate::settings::LinterSettings;
-use crate::Locator;
+use ruff_rule_pylint::{self as pylint};
+use ruff_rule_ruff::rules::indented_form_feed;
+use ruff_linter_settings::LinterSettings;
+use ruff_linter_commons::Locator;
 
 pub(crate) fn check_physical_lines(
     locator: &Locator,
@@ -101,11 +101,11 @@ mod tests {
     use ruff_python_index::Indexer;
     use ruff_python_parser::parse_module;
 
-    use crate::line_width::LineLength;
-    use crate::registry::Rule;
-    use crate::rules::pycodestyle;
-    use crate::settings::LinterSettings;
-    use crate::Locator;
+    use ruff_linter_commons::line_width::LineLength;
+    use ruff_codes::Rule;
+    use ruff_linter_settings::rules::pycodestyle;
+    use ruff_linter_settings::LinterSettings;
+    use ruff_linter_commons::Locator;
 
     use super::check_physical_lines;
 
@@ -124,9 +124,9 @@ mod tests {
                 &indexer,
                 &[],
                 &LinterSettings {
-                    pycodestyle: pycodestyle::settings::Settings {
+                    pycodestyle: pycodestyle::Settings {
                         max_line_length: line_length,
-                        ..pycodestyle::settings::Settings::default()
+                        ..pycodestyle::Settings::default()
                     },
                     ..LinterSettings::for_rule(Rule::LineTooLong)
                 },

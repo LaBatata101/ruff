@@ -1,5 +1,5 @@
-use ruff_linter::display_settings;
-use ruff_linter::settings::types::{ExtensionMapping, FilePatternSet, PreviewMode};
+use ruff_linter_macros::display_settings;
+use ruff_codes::types::{ExtensionMapping, FilePatternSet, PreviewMode};
 use ruff_macros::CacheKey;
 use ruff_python_ast::PythonVersion;
 use std::collections::BTreeMap;

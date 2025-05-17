@@ -1,0 +1,42 @@
+[package]
+name = "ruff_rule_isort"
+version = "0.0.0"
+publish = false
+authors = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+
+[dependencies]
+ruff_python_ast = { workspace = true, features = ["serde", "cache"] }
+ruff_python_codegen = { workspace = true }
+ruff_python_index = { workspace = true }
+ruff_python_literal = { workspace = true }
+ruff_python_semantic = { workspace = true }
+ruff_python_parser = { workspace = true }
+ruff_source_file = { workspace = true }
+ruff_python_trivia = { workspace = true }
+ruff_python_stdlib = { workspace = true }
+ruff_text_size = { workspace = true }
+ruff_diagnostics = { workspace = true }
+ruff_macros = { workspace = true }
+ruff_notebook = { workspace = true }
+ruff_codes = { workspace = true }
+ruff_linter_directives = { workspace = true }
+ruff_linter_settings = { workspace = true }
+ruff_linter_commons = { workspace = true }
+ruff_linter_fix = { workspace = true }
+
+rustc-hash = { workspace = true }
+itertools = { workspace = true }
+glob = { workspace = true }
+natord = { workspace = true }
+unicode-width = { workspace = true }
+
+[dev-dependencies]
+ruff_linter_test = { workspace = true }
+anyhow = { workspace = true }
+test-case = { workspace = true }

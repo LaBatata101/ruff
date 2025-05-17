@@ -4,7 +4,7 @@ use std::path::Path;
 use anyhow::Result;
 use log::error;
 
-use ruff_linter::source_kind::SourceKind;
+use ruff_linter_commons::source_kind::SourceKind;
 use ruff_python_ast::{PySourceType, SourceType};
 use ruff_workspace::resolver::{match_exclusion, python_file_at_path, Resolver};
 use ruff_workspace::FormatterSettings;

@@ -14,10 +14,10 @@ use itertools::Itertools;
 use path_absolutize::path_dedot;
 use regex::Regex;
 use ruff_graph::Direction;
-use ruff_linter::line_width::LineLength;
-use ruff_linter::logging::LogLevel;
-use ruff_linter::registry::Rule;
-use ruff_linter::settings::types::{
+use ruff_linter_commons::line_width::LineLength;
+use ruff_linter_commons::logging::LogLevel;
+use ruff_codes::Rule;
+use ruff_codes::types::{
     ExtensionPair, FilePattern, OutputFormat, PatternPrefixPair, PerFileIgnore, PreviewMode,
     PythonVersion, UnsafeFixes,
 };

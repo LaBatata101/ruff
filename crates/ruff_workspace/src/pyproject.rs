@@ -8,7 +8,7 @@ use pep440_rs::{Operator, Version, VersionSpecifiers};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
-use ruff_linter::settings::types::PythonVersion;
+use ruff_codes::types::PythonVersion;
 
 use crate::options::Options;
 
@@ -114,7 +114,7 @@ pub fn find_fallback_target_version<P: AsRef<Path>>(path: P) -> Option<PythonVer
 #[cfg(not(target_arch = "wasm32"))]
 pub fn find_user_settings_toml() -> Option<PathBuf> {
     use etcetera::BaseStrategy;
-    use ruff_linter::warn_user_once;
+    use ruff_linter_commons::warn_user_once;
 
     let strategy = etcetera::base_strategy::choose_base_strategy().ok()?;
     let config_dir = strategy.config_dir().join("ruff");
@@ -272,9 +272,9 @@ mod tests {
     use rustc_hash::FxHashMap;
     use tempfile::TempDir;
 
-    use ruff_linter::codes;
-    use ruff_linter::line_width::LineLength;
-    use ruff_linter::settings::types::PatternPrefixPair;
+    use ruff_codes::codes::{self};
+    use ruff_codes::types::PatternPrefixPair;
+    use ruff_linter_commons::line_width::LineLength;
 
     use crate::options::{Flake8BuiltinsOptions, LintCommonOptions, LintOptions, Options};
     use crate::pyproject::{find_settings_toml, parse_pyproject_toml, Pyproject, Tools};

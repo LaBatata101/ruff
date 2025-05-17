@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use ruff_linter::source_kind::SourceKind;
+use ruff_linter_commons::source_kind::SourceKind;
 use ruff_python_ast::PySourceType;
 use ruff_python_parser::parse_unchecked_source;
 

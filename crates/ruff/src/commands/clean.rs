@@ -7,8 +7,8 @@ use path_absolutize::path_dedot;
 use walkdir::WalkDir;
 
 use ruff_cache::CACHE_DIR_NAME;
-use ruff_linter::fs;
-use ruff_linter::logging::LogLevel;
+use ruff_linter_commons::fs;
+use ruff_linter_commons::logging::LogLevel;
 
 /// Clear any caches in the current directory or any subdirectories.
 pub(crate) fn clean(level: LogLevel) -> Result<()> {

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use ruff_linter::settings::LinterSettings;
+use ruff_linter_settings::LinterSettings;
 use ruff_workspace::resolver::{match_any_exclusion, match_any_inclusion};
 use ruff_workspace::{FileResolverSettings, FormatterSettings};
 

@@ -23,20 +23,21 @@
 
 use std::cell::RefCell;
 use std::path::Path;
+use std::rc::Rc;
 
 use itertools::Itertools;
 use log::debug;
+use ruff_linter_checkers::ast::{CheckerSnapshot, ParsedAnnotationsCache};
 use ruff_python_parser::semantic_errors::{
     SemanticSyntaxChecker, SemanticSyntaxContext, SemanticSyntaxError, SemanticSyntaxErrorKind,
 };
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
-use ruff_diagnostics::{Diagnostic, Edit, IsolationLevel};
+use ruff_diagnostics::Diagnostic;
 use ruff_notebook::{CellOffsets, NotebookIndex};
 use ruff_python_ast::helpers::{collect_import_from_member, is_docstring_stmt, to_module_path};
 use ruff_python_ast::identifier::Identifier;
 use ruff_python_ast::name::QualifiedName;
-use ruff_python_ast::str::Quote;
 use ruff_python_ast::visitor::{walk_except_handler, walk_pattern, Visitor};
 use ruff_python_ast::{
     self as ast, AnyParameterRef, ArgOrKeyword, Comprehension, ElifElseClause, ExceptHandler, Expr,
@@ -44,36 +45,34 @@ use ruff_python_ast::{
     PythonVersion, Stmt, Suite, UnaryOp,
 };
 use ruff_python_ast::{helpers, str, visitor, PySourceType};
-use ruff_python_codegen::{Generator, Stylist};
+use ruff_python_codegen::Stylist;
 use ruff_python_index::Indexer;
-use ruff_python_parser::typing::{parse_type_annotation, AnnotationKind, ParsedAnnotation};
-use ruff_python_parser::{ParseError, Parsed, Tokens};
+use ruff_python_parser::typing::{AnnotationKind, ParsedAnnotation};
+use ruff_python_parser::{ParseError, Parsed};
 use ruff_python_semantic::all::{DunderAllDefinition, DunderAllFlags};
 use ruff_python_semantic::analyze::{imports, typing};
 use ruff_python_semantic::{
     BindingFlags, BindingId, BindingKind, Exceptions, Export, FromImport, GeneratorKind, Globals,
-    Import, Module, ModuleKind, ModuleSource, NodeId, ScopeId, ScopeKind, SemanticModel,
+    Import, Module, ModuleKind, ModuleSource, ScopeId, ScopeKind, SemanticModel,
     SemanticModelFlags, StarImport, SubmoduleImport,
 };
 use ruff_python_stdlib::builtins::{python_builtins, MAGIC_GLOBALS};
-use ruff_python_trivia::CommentRanges;
 use ruff_source_file::{OneIndexed, SourceRow};
 use ruff_text_size::{Ranged, TextRange, TextSize};
 
 use crate::checkers::ast::annotation::AnnotationContext;
-use crate::docstrings::extraction::ExtractionTarget;
-use crate::importer::{ImportRequest, Importer, ResolutionError};
-use crate::noqa::NoqaMapping;
-use crate::package::PackageRoot;
-use crate::preview::{is_semantic_errors_enabled, is_undefined_export_in_dunder_init_enabled};
-use crate::registry::Rule;
-use crate::rules::pyflakes::rules::{
-    LateFutureImport, ReturnOutsideFunction, YieldOutsideFunction,
+use ruff_codes::rules::pyflakes;
+use ruff_codes::rules::pyflakes::{LateFutureImport, ReturnOutsideFunction, YieldOutsideFunction};
+use ruff_codes::rules::pylint::{AwaitOutsideAsync, LoadBeforeGlobalDeclaration};
+use ruff_codes::Rule;
+use ruff_linter_commons::docstrings::extraction::ExtractionTarget;
+use ruff_linter_commons::{docstrings, package::PackageRoot, Locator};
+use ruff_linter_fix::importer::Importer;
+use ruff_linter_noqa::NoqaMapping;
+use ruff_linter_settings::preview::{
+    is_semantic_errors_enabled, is_undefined_export_in_dunder_init_enabled,
 };
-use crate::rules::pylint::rules::{AwaitOutsideAsync, LoadBeforeGlobalDeclaration};
-use crate::rules::{flake8_pyi, flake8_type_checking, pyflakes, pyupgrade};
-use crate::settings::{flags, LinterSettings, TargetVersion};
-use crate::{docstrings, noqa, Locator};
+use ruff_linter_settings::{flags, LinterSettings, TargetVersion};
 
 mod analyze;
 mod annotation;
@@ -184,7 +183,7 @@ pub(crate) struct Checker<'a> {
     /// The [`Parsed`] output for the source code.
     parsed: &'a Parsed<ModModule>,
     /// An internal cache for parsed string annotations
-    parsed_annotations_cache: ParsedAnnotationsCache<'a>,
+    parsed_annotations_cache: Rc<RefCell<ParsedAnnotationsCache<'a>>>,
     /// The [`Parsed`] output for the type annotation the checker is currently in.
     parsed_type_annotation: Option<&'a ParsedAnnotation>,
     /// The [`Path`] to the file under analysis.
@@ -216,17 +215,17 @@ pub(crate) struct Checker<'a> {
     /// The [`Indexer`] for the current file, which contains the offsets of all comments and more.
     indexer: &'a Indexer,
     /// The [`Importer`] for the current file, which enables importing of other modules.
-    importer: Importer<'a>,
+    importer: Rc<RefCell<Importer<'a>>>,
     /// The [`SemanticModel`], built up over the course of the AST traversal.
-    semantic: SemanticModel<'a>,
+    semantic: Rc<RefCell<SemanticModel<'a>>>,
     /// A set of deferred nodes to be visited after the current traversal (e.g., function bodies).
     visit: deferred::Visit<'a>,
     /// A set of deferred nodes to be analyzed after the AST traversal (e.g., `for` loops).
     analyze: deferred::Analyze,
     /// The cumulative set of diagnostics computed across all lint rules.
-    diagnostics: RefCell<Vec<Diagnostic>>,
+    diagnostics: Rc<RefCell<Vec<Diagnostic>>>,
     /// The list of names already seen by flake8-bugbear diagnostics, to avoid duplicate violations.
-    flake8_bugbear_seen: RefCell<FxHashSet<TextRange>>,
+    flake8_bugbear_seen: Rc<RefCell<FxHashSet<TextRange>>>,
     /// The end offset of the last visited statement.
     last_stmt_end: TextSize,
     /// A state describing if a docstring is expected or not.
@@ -237,7 +236,7 @@ pub(crate) struct Checker<'a> {
     #[expect(clippy::struct_field_names)]
     semantic_checker: SemanticSyntaxChecker,
     /// Errors collected by the `semantic_checker`.
-    semantic_errors: RefCell<Vec<SemanticSyntaxError>>,
+    semantic_errors: Rc<RefCell<Vec<SemanticSyntaxError>>>,
 }
 
 impl<'a> Checker<'a> {
@@ -259,11 +258,17 @@ impl<'a> Checker<'a> {
         notebook_index: Option<&'a NotebookIndex>,
         target_version: TargetVersion,
     ) -> Checker<'a> {
-        let semantic = SemanticModel::new(&settings.typing_modules, path, module);
+        let semantic = Rc::new(RefCell::new(SemanticModel::new(
+            &settings.typing_modules,
+            path,
+            module,
+        )));
         Self {
             parsed,
             parsed_type_annotation: None,
-            parsed_annotations_cache: ParsedAnnotationsCache::new(parsed_annotations_arena),
+            parsed_annotations_cache: Rc::new(RefCell::new(ParsedAnnotationsCache::new(
+                parsed_annotations_arena,
+            ))),
             settings,
             noqa_line_for,
             noqa,
@@ -274,94 +279,157 @@ impl<'a> Checker<'a> {
             locator,
             stylist,
             indexer,
-            importer: Importer::new(parsed, locator, stylist),
+            importer: Rc::new(RefCell::new(Importer::new(parsed, locator, stylist))),
             semantic,
             visit: deferred::Visit::default(),
             analyze: deferred::Analyze::default(),
-            diagnostics: RefCell::default(),
-            flake8_bugbear_seen: RefCell::default(),
+            diagnostics: Rc::new(RefCell::default()),
+            flake8_bugbear_seen: Rc::new(RefCell::default()),
             cell_offsets,
             notebook_index,
             last_stmt_end: TextSize::default(),
             docstring_state: DocstringState::default(),
             target_version,
             semantic_checker: SemanticSyntaxChecker::new(),
-            semantic_errors: RefCell::default(),
+            semantic_errors: Rc::new(RefCell::default()),
         }
     }
 }
 
 impl<'a> Checker<'a> {
-    /// Return `true` if a [`Rule`] is disabled by a `noqa` directive.
-    pub(crate) fn rule_is_ignored(&self, code: Rule, offset: TextSize) -> bool {
-        // TODO(charlie): `noqa` directives are mostly enforced in `check_lines.rs`.
-        // However, in rare cases, we need to check them here. For example, when
-        // removing unused imports, we create a single fix that's applied to all
-        // unused members on a single import. We need to preemptively omit any
-        // members from the fix that will eventually be excluded by a `noqa`.
-        // Unfortunately, we _do_ want to register a `Diagnostic` for each
-        // eventually-ignored import, so that our `noqa` counts are accurate.
-        if !self.noqa.is_enabled() {
-            return false;
-        }
-
-        noqa::rule_is_ignored(
-            code,
-            offset,
+    fn snapshot(&self) -> CheckerSnapshot<'a> {
+        CheckerSnapshot::new(
+            self.parsed,
+            self.settings,
             self.noqa_line_for,
-            self.comment_ranges(),
+            self.noqa,
+            self.path,
+            self.package,
+            self.module,
             self.locator,
+            self.stylist,
+            self.indexer,
+            self.source_type,
+            self.cell_offsets,
+            self.notebook_index,
+            self.target_version,
+            Rc::clone(&self.importer),
+            Rc::clone(&self.semantic),
+            Rc::clone(&self.diagnostics),
+            Rc::clone(&self.semantic_errors),
+            Rc::clone(&self.flake8_bugbear_seen),
+            Rc::clone(&self.parsed_annotations_cache),
+            self.parsed_type_annotation,
         )
     }
 
-    /// Create a [`Generator`] to generate source code based on the current AST state.
-    pub(crate) fn generator(&self) -> Generator {
-        Generator::new(self.stylist.indentation(), self.stylist.line_ending())
+    fn semantic(&self) -> std::cell::Ref<'_, SemanticModel<'a>> {
+        self.semantic.borrow()
     }
 
-    /// Return the preferred quote for a generated `StringLiteral` node, given where we are in the
-    /// AST.
-    fn preferred_quote(&self) -> Quote {
-        self.f_string_quote_style().unwrap_or(self.stylist.quote())
+    fn semantic_mut(&mut self) -> std::cell::RefMut<'_, SemanticModel<'a>> {
+        self.semantic.borrow_mut()
     }
 
-    /// Return the default string flags a generated `StringLiteral` node should use, given where we
-    /// are in the AST.
-    pub(crate) fn default_string_flags(&self) -> ast::StringLiteralFlags {
-        ast::StringLiteralFlags::empty().with_quote_style(self.preferred_quote())
+    fn with_semantic_checker(&mut self, f: impl FnOnce(&mut SemanticSyntaxChecker, &Checker)) {
+        let mut checker = std::mem::take(&mut self.semantic_checker);
+        f(&mut checker, self);
+        self.semantic_checker = checker;
     }
 
-    /// Return the default bytestring flags a generated `ByteStringLiteral` node should use, given
-    /// where we are in the AST.
-    pub(crate) fn default_bytes_flags(&self) -> ast::BytesLiteralFlags {
-        ast::BytesLiteralFlags::empty().with_quote_style(self.preferred_quote())
-    }
-
-    /// Return the default f-string flags a generated `FString` node should use, given where we are
-    /// in the AST.
-    pub(crate) fn default_fstring_flags(&self) -> ast::FStringFlags {
-        ast::FStringFlags::empty().with_quote_style(self.preferred_quote())
-    }
-
-    /// Returns the appropriate quoting for f-string by reversing the one used outside of
-    /// the f-string.
+    // FIX: duplicated in `CheckerSnapshot`
+    /// Return the [`PythonVersion`] to use for version-related lint rules.
     ///
-    /// If the current expression in the context is not an f-string, returns ``None``.
-    pub(crate) fn f_string_quote_style(&self) -> Option<Quote> {
-        if !self.semantic.in_f_string() {
-            return None;
-        }
-
-        // Find the quote character used to start the containing f-string.
-        let ast::ExprFString { value, .. } = self
-            .semantic
-            .current_expressions()
-            .find_map(|expr| expr.as_f_string_expr())?;
-        Some(value.iter().next()?.quote_style().opposite())
+    /// If the user did not provide a target version, this defaults to the lowest supported Python
+    /// version ([`PythonVersion::default`]).
+    ///
+    /// Note that this method should not be used for version-related syntax errors emitted by the
+    /// parser or the [`SemanticSyntaxChecker`], which should instead default to the _latest_
+    /// supported Python version.
+    pub fn target_version(&self) -> PythonVersion {
+        self.target_version.linter_version()
     }
 
+    // FIX: duplicated in `CheckerSnapshot`
+    /// Returns whether the given rule should be checked.
+    #[inline]
+    pub const fn enabled(&self, rule: Rule) -> bool {
+        self.settings.rules.enabled(rule)
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    /// Returns whether any of the given rules should be checked.
+    #[inline]
+    pub const fn any_enabled(&self, rules: &[Rule]) -> bool {
+        self.settings.rules.any_enabled(rules)
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    /// The [`Locator`] for the current file, which enables extraction of source code from byte
+    /// offsets.
+    pub const fn locator(&self) -> &'a Locator<'a> {
+        self.locator
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    pub const fn source(&self) -> &'a str {
+        self.locator.contents()
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    /// The [`Stylist`] for the current file, which detects the current line ending, quote, and
+    /// indentation style.
+    pub const fn stylist(&self) -> &'a Stylist<'a> {
+        self.stylist
+    }
+
+    /// The [`Indexer`] for the current file, which contains the offsets of all comments and more.
+    pub const fn indexer(&self) -> &'a Indexer {
+        self.indexer
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    /// Parse a stringified type annotation as an AST expression,
+    /// e.g. `"List[str]"` in `x: "List[str]"`
+    ///
+    /// This method is a wrapper around [`ruff_python_parser::typing::parse_type_annotation`]
+    /// that adds caching.
+    pub fn parse_type_annotation(
+        &self,
+        annotation: &ast::ExprStringLiteral,
+    ) -> Result<&'a ParsedAnnotation, &'a ParseError> {
+        self.parsed_annotations_cache
+            .borrow()
+            .lookup_or_parse(annotation, self.locator.contents())
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    /// Push `diagnostic` if the checker is not in a `@no_type_check` context.
+    pub fn report_type_diagnostic(&self, diagnostic: Diagnostic) {
+        if !self.semantic().in_no_type_check() {
+            self.report_diagnostic(diagnostic);
+        }
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    /// Push a new [`Diagnostic`] to the collection in the [`Checker`]
+    pub fn report_diagnostic(&self, diagnostic: Diagnostic) {
+        let mut diagnostics = self.diagnostics.borrow_mut();
+        diagnostics.push(diagnostic);
+    }
+
+    // FIX: duplicated in `CheckerSnapshot`
+    /// Extend the collection of [`Diagnostic`] objects in the [`Checker`]
+    pub fn report_diagnostics<I>(&self, diagnostics: I)
+    where
+        I: IntoIterator<Item = Diagnostic>,
+    {
+        let mut checker_diagnostics = self.diagnostics.borrow_mut();
+        checker_diagnostics.extend(diagnostics);
+    }
+    // FIX: duplicated in `CheckerSnapshot`
     /// Returns the [`SourceRow`] for the given offset.
-    pub(crate) fn compute_source_row(&self, offset: TextSize) -> SourceRow {
+    pub fn compute_source_row(&self, offset: TextSize) -> SourceRow {
         #[expect(deprecated)]
         let line = self.locator.compute_line_index(offset);
 
@@ -372,219 +440,6 @@ impl<'a> Checker<'a> {
         } else {
             SourceRow::SourceFile { line }
         }
-    }
-
-    /// Returns the [`CommentRanges`] for the parsed source code.
-    pub(crate) fn comment_ranges(&self) -> &'a CommentRanges {
-        self.indexer.comment_ranges()
-    }
-
-    /// Push a new [`Diagnostic`] to the collection in the [`Checker`]
-    pub(crate) fn report_diagnostic(&self, diagnostic: Diagnostic) {
-        let mut diagnostics = self.diagnostics.borrow_mut();
-        diagnostics.push(diagnostic);
-    }
-
-    /// Extend the collection of [`Diagnostic`] objects in the [`Checker`]
-    pub(crate) fn report_diagnostics<I>(&self, diagnostics: I)
-    where
-        I: IntoIterator<Item = Diagnostic>,
-    {
-        let mut checker_diagnostics = self.diagnostics.borrow_mut();
-        checker_diagnostics.extend(diagnostics);
-    }
-
-    /// Adds a [`TextRange`] to the set of ranges of variable names
-    /// flagged in `flake8-bugbear` violations so far.
-    ///
-    /// Returns whether the value was newly inserted.
-    pub(crate) fn insert_flake8_bugbear_range(&self, range: TextRange) -> bool {
-        let mut ranges = self.flake8_bugbear_seen.borrow_mut();
-        ranges.insert(range)
-    }
-
-    /// Returns the [`Tokens`] for the parsed type annotation if the checker is in a typing context
-    /// or the parsed source code.
-    pub(crate) fn tokens(&self) -> &'a Tokens {
-        if let Some(type_annotation) = self.parsed_type_annotation {
-            type_annotation.parsed().tokens()
-        } else {
-            self.parsed.tokens()
-        }
-    }
-
-    /// The [`Locator`] for the current file, which enables extraction of source code from byte
-    /// offsets.
-    pub(crate) const fn locator(&self) -> &'a Locator<'a> {
-        self.locator
-    }
-
-    pub(crate) const fn source(&self) -> &'a str {
-        self.locator.contents()
-    }
-
-    /// The [`Stylist`] for the current file, which detects the current line ending, quote, and
-    /// indentation style.
-    pub(crate) const fn stylist(&self) -> &'a Stylist<'a> {
-        self.stylist
-    }
-
-    /// The [`Indexer`] for the current file, which contains the offsets of all comments and more.
-    pub(crate) const fn indexer(&self) -> &'a Indexer {
-        self.indexer
-    }
-
-    /// The [`Importer`] for the current file, which enables importing of other modules.
-    pub(crate) const fn importer(&self) -> &Importer<'a> {
-        &self.importer
-    }
-
-    /// The [`SemanticModel`], built up over the course of the AST traversal.
-    pub(crate) const fn semantic(&self) -> &SemanticModel<'a> {
-        &self.semantic
-    }
-
-    /// The [`Path`] to the file under analysis.
-    pub(crate) const fn path(&self) -> &'a Path {
-        self.path
-    }
-
-    /// The [`Path`] to the package containing the current file.
-    pub(crate) const fn package(&self) -> Option<PackageRoot<'_>> {
-        self.package
-    }
-
-    /// The [`CellOffsets`] for the current file, if it's a Jupyter notebook.
-    pub(crate) const fn cell_offsets(&self) -> Option<&'a CellOffsets> {
-        self.cell_offsets
-    }
-
-    /// Returns whether the given rule should be checked.
-    #[inline]
-    pub(crate) const fn enabled(&self, rule: Rule) -> bool {
-        self.settings.rules.enabled(rule)
-    }
-
-    /// Returns whether any of the given rules should be checked.
-    #[inline]
-    pub(crate) const fn any_enabled(&self, rules: &[Rule]) -> bool {
-        self.settings.rules.any_enabled(rules)
-    }
-
-    /// Returns the [`IsolationLevel`] to isolate fixes for a given node.
-    ///
-    /// The primary use-case for fix isolation is to ensure that we don't delete all statements
-    /// in a given indented block, which would cause a syntax error. We therefore need to ensure
-    /// that we delete at most one statement per indented block per fixer pass. Fix isolation should
-    /// thus be applied whenever we delete a statement, but can otherwise be omitted.
-    pub(crate) fn isolation(node_id: Option<NodeId>) -> IsolationLevel {
-        node_id
-            .map(|node_id| IsolationLevel::Group(node_id.into()))
-            .unwrap_or_default()
-    }
-
-    /// Parse a stringified type annotation as an AST expression,
-    /// e.g. `"List[str]"` in `x: "List[str]"`
-    ///
-    /// This method is a wrapper around [`ruff_python_parser::typing::parse_type_annotation`]
-    /// that adds caching.
-    pub(crate) fn parse_type_annotation(
-        &self,
-        annotation: &ast::ExprStringLiteral,
-    ) -> Result<&'a ParsedAnnotation, &'a ParseError> {
-        self.parsed_annotations_cache
-            .lookup_or_parse(annotation, self.locator.contents())
-    }
-
-    /// Apply a test to an annotation expression,
-    /// abstracting over the fact that the annotation expression might be "stringized".
-    ///
-    /// A stringized annotation is one enclosed in string quotes:
-    /// `foo: "typing.Any"` means the same thing to a type checker as `foo: typing.Any`.
-    pub(crate) fn match_maybe_stringized_annotation(
-        &self,
-        expr: &ast::Expr,
-        match_fn: impl FnOnce(&ast::Expr) -> bool,
-    ) -> bool {
-        if let ast::Expr::StringLiteral(string_annotation) = expr {
-            let Some(parsed_annotation) = self.parse_type_annotation(string_annotation).ok() else {
-                return false;
-            };
-            match_fn(parsed_annotation.expression())
-        } else {
-            match_fn(expr)
-        }
-    }
-
-    /// Push `diagnostic` if the checker is not in a `@no_type_check` context.
-    pub(crate) fn report_type_diagnostic(&self, diagnostic: Diagnostic) {
-        if !self.semantic.in_no_type_check() {
-            self.report_diagnostic(diagnostic);
-        }
-    }
-
-    /// Return the [`PythonVersion`] to use for version-related lint rules.
-    ///
-    /// If the user did not provide a target version, this defaults to the lowest supported Python
-    /// version ([`PythonVersion::default`]).
-    ///
-    /// Note that this method should not be used for version-related syntax errors emitted by the
-    /// parser or the [`SemanticSyntaxChecker`], which should instead default to the _latest_
-    /// supported Python version.
-    pub(crate) fn target_version(&self) -> PythonVersion {
-        self.target_version.linter_version()
-    }
-
-    fn with_semantic_checker(&mut self, f: impl FnOnce(&mut SemanticSyntaxChecker, &Checker)) {
-        let mut checker = std::mem::take(&mut self.semantic_checker);
-        f(&mut checker, self);
-        self.semantic_checker = checker;
-    }
-
-    /// Create a [`TypingImporter`] that will import `member` from either `typing` or
-    /// `typing_extensions`.
-    ///
-    /// On Python <`version_added_to_typing`, `member` is imported from `typing_extensions`, while
-    /// on Python >=`version_added_to_typing`, it is imported from `typing`.
-    ///
-    /// If the Python version is less than `version_added_to_typing` but
-    /// `LinterSettings::typing_extensions` is `false`, this method returns `None`.
-    pub(crate) fn typing_importer<'b>(
-        &'b self,
-        member: &'b str,
-        version_added_to_typing: PythonVersion,
-    ) -> Option<TypingImporter<'b, 'a>> {
-        let source_module = if self.target_version() >= version_added_to_typing {
-            "typing"
-        } else if !self.settings.typing_extensions {
-            return None;
-        } else {
-            "typing_extensions"
-        };
-        Some(TypingImporter {
-            checker: self,
-            source_module,
-            member,
-        })
-    }
-}
-
-pub(crate) struct TypingImporter<'a, 'b> {
-    checker: &'a Checker<'b>,
-    source_module: &'static str,
-    member: &'a str,
-}
-
-impl TypingImporter<'_, '_> {
-    /// Create an [`Edit`] that makes the requested symbol available at `position`.
-    ///
-    /// See [`Importer::get_or_import_symbol`] for more details on the returned values and
-    /// [`Checker::typing_importer`] for a way to construct a [`TypingImporter`].
-    pub(crate) fn import(&self, position: TextSize) -> Result<(Edit, String), ResolutionError> {
-        let request = ImportRequest::import_from(self.source_module, self.member);
-        self.checker
-            .importer
-            .get_or_import_symbol(&request, position, self.checker.semantic())
     }
 }
 
@@ -597,7 +452,7 @@ impl SemanticSyntaxContext for Checker<'_> {
     }
 
     fn global(&self, name: &str) -> Option<TextRange> {
-        self.semantic.global(name)
+        self.semantic().global(name)
     }
 
     fn report_semantic_error(&self, error: SemanticSyntaxError) {
@@ -665,11 +520,11 @@ impl SemanticSyntaxContext for Checker<'_> {
     }
 
     fn future_annotations_or_stub(&self) -> bool {
-        self.semantic.future_annotations_or_stub()
+        self.semantic().future_annotations_or_stub()
     }
 
     fn in_async_context(&self) -> bool {
-        for scope in self.semantic.current_scopes() {
+        for scope in self.semantic().current_scopes() {
             match scope.kind {
                 ScopeKind::Class(_) | ScopeKind::Lambda(_) => return false,
                 ScopeKind::Function(ast::StmtFunctionDef { is_async, .. }) => return *is_async,
@@ -680,7 +535,7 @@ impl SemanticSyntaxContext for Checker<'_> {
     }
 
     fn in_await_allowed_context(&self) -> bool {
-        for scope in self.semantic.current_scopes() {
+        for scope in self.semantic().current_scopes() {
             match scope.kind {
                 ScopeKind::Class(_) => return false,
                 ScopeKind::Function(_) | ScopeKind::Lambda(_) => return true,
@@ -691,7 +546,7 @@ impl SemanticSyntaxContext for Checker<'_> {
     }
 
     fn in_sync_comprehension(&self) -> bool {
-        for scope in self.semantic.current_scopes() {
+        for scope in self.semantic().current_scopes() {
             if let ScopeKind::Generator {
                 kind:
                     GeneratorKind::ListComprehension
@@ -707,12 +562,14 @@ impl SemanticSyntaxContext for Checker<'_> {
     }
 
     fn in_module_scope(&self) -> bool {
-        self.semantic.current_scope().kind.is_module()
+        self.semantic().current_scope().kind.is_module()
     }
 
     fn in_function_scope(&self) -> bool {
-        let kind = &self.semantic.current_scope().kind;
-        matches!(kind, ScopeKind::Function(_) | ScopeKind::Lambda(_))
+        matches!(
+            &self.semantic().current_scope().kind,
+            ScopeKind::Function(_) | ScopeKind::Lambda(_)
+        )
     }
 
     fn in_notebook(&self) -> bool {
@@ -721,7 +578,7 @@ impl SemanticSyntaxContext for Checker<'_> {
 
     fn in_generator_scope(&self) -> bool {
         matches!(
-            &self.semantic.current_scope().kind,
+            &self.semantic().current_scope().kind,
             ScopeKind::Generator {
                 kind: GeneratorKind::Generator,
                 ..
@@ -739,30 +596,30 @@ impl<'a> Visitor<'a> for Checker<'a> {
         }
 
         // Step 0: Pre-processing
-        self.semantic.push_node(stmt);
+        self.semantic_mut().push_node(stmt);
 
         // For Jupyter Notebooks, we'll reset the `IMPORT_BOUNDARY` flag when
         // we encounter a cell boundary.
         if self.source_type.is_ipynb()
-            && self.semantic.at_top_level()
-            && self.semantic.seen_import_boundary()
+            && self.semantic().at_top_level()
+            && self.semantic().seen_import_boundary()
             && self.cell_offsets.is_some_and(|cell_offsets| {
                 cell_offsets.has_cell_boundary(TextRange::new(self.last_stmt_end, stmt.start()))
             })
         {
-            self.semantic.flags -= SemanticModelFlags::IMPORT_BOUNDARY;
+            self.semantic_mut().flags -= SemanticModelFlags::IMPORT_BOUNDARY;
         }
 
         // Track whether we've seen module docstrings, non-imports, etc.
         match stmt {
             Stmt::Expr(ast::StmtExpr { value, .. })
-                if !self.semantic.seen_module_docstring_boundary()
+                if !self.semantic().seen_module_docstring_boundary()
                     && value.is_string_literal_expr() =>
             {
-                self.semantic.flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
+                self.semantic_mut().flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
             }
             Stmt::ImportFrom(ast::StmtImportFrom { module, names, .. }) => {
-                self.semantic.flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
+                self.semantic_mut().flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
 
                 // Allow __future__ imports until we see a non-__future__ import.
                 if let Some("__future__") = module.as_deref() {
@@ -770,39 +627,39 @@ impl<'a> Visitor<'a> for Checker<'a> {
                         .iter()
                         .any(|alias| alias.name.as_str() == "annotations")
                     {
-                        self.semantic.flags |= SemanticModelFlags::FUTURE_ANNOTATIONS;
+                        self.semantic_mut().flags |= SemanticModelFlags::FUTURE_ANNOTATIONS;
                     }
                 }
             }
             Stmt::Import(_) => {
-                self.semantic.flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
+                self.semantic_mut().flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
             }
             _ => {
-                self.semantic.flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
-                if !(self.semantic.seen_import_boundary()
+                self.semantic_mut().flags |= SemanticModelFlags::MODULE_DOCSTRING_BOUNDARY;
+                if !(self.semantic().seen_import_boundary()
                     || stmt.is_ipy_escape_command_stmt()
                     || helpers::is_assignment_to_a_dunder(stmt)
-                    || helpers::in_nested_block(self.semantic.current_statements())
-                    || imports::is_matplotlib_activation(stmt, self.semantic())
-                    || imports::is_sys_path_modification(stmt, self.semantic())
-                    || imports::is_os_environ_modification(stmt, self.semantic())
-                    || imports::is_pytest_importorskip(stmt, self.semantic())
-                    || imports::is_site_sys_path_modification(stmt, self.semantic()))
+                    || helpers::in_nested_block(self.semantic().current_statements())
+                    || imports::is_matplotlib_activation(stmt, &self.semantic())
+                    || imports::is_sys_path_modification(stmt, &self.semantic())
+                    || imports::is_os_environ_modification(stmt, &self.semantic())
+                    || imports::is_pytest_importorskip(stmt, &self.semantic())
+                    || imports::is_site_sys_path_modification(stmt, &self.semantic()))
                 {
-                    self.semantic.flags |= SemanticModelFlags::IMPORT_BOUNDARY;
+                    self.semantic_mut().flags |= SemanticModelFlags::IMPORT_BOUNDARY;
                 }
             }
         }
 
         // Store the flags prior to any further descent, so that we can restore them after visiting
         // the node.
-        let flags_snapshot = self.semantic.flags;
+        let flags_snapshot = self.semantic().flags;
 
         // Update the semantic model if it is in a docstring. This should be done after the
         // flags snapshot to ensure that it gets reset once the statement is analyzed.
         if let Some(kind) = self.docstring_state.expected_kind() {
             if is_docstring_stmt(stmt) {
-                self.semantic.flags |= kind.as_flag();
+                self.semantic_mut().flags |= kind.as_flag();
             }
             // Reset the state irrespective of whether the statement is a docstring or not.
             self.docstring_state = DocstringState::Other;
@@ -819,8 +676,8 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 self.handle_node_load(target);
             }
             Stmt::Import(ast::StmtImport { names, range: _ }) => {
-                if self.semantic.at_top_level() {
-                    self.importer.visit_import(stmt);
+                if self.semantic().at_top_level() {
+                    self.importer.borrow_mut().visit_import(stmt);
                 }
 
                 for alias in names {
@@ -829,7 +686,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                     let module = alias.name.split('.').next().unwrap();
 
                     // Mark the top-level module as "seen" by the semantic model.
-                    self.semantic.add_module(module);
+                    self.semantic_mut().add_module(module);
 
                     if alias.asname.is_none() && alias.name.contains('.') {
                         let qualified_name = QualifiedName::user_defined(&alias.name);
@@ -873,8 +730,8 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 level,
                 range: _,
             }) => {
-                if self.semantic.at_top_level() {
-                    self.importer.visit_import(stmt);
+                if self.semantic().at_top_level() {
+                    self.importer.borrow_mut().visit_import(stmt);
                 }
 
                 let module = module.as_deref();
@@ -883,7 +740,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 // Mark the top-level module as "seen" by the semantic model.
                 if level == 0 {
                     if let Some(module) = module.and_then(|module| module.split('.').next()) {
-                        self.semantic.add_module(module);
+                        self.semantic_mut().add_module(module);
                     }
                 }
 
@@ -897,7 +754,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                             BindingFlags::empty(),
                         );
                     } else if &alias.name == "*" {
-                        self.semantic
+                        self.semantic_mut()
                             .current_scope_mut()
                             .add_star_import(StarImport { level, module });
                     } else {
@@ -934,51 +791,63 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 }
             }
             Stmt::Global(ast::StmtGlobal { names, range: _ }) => {
-                if !self.semantic.scope_id.is_global() {
+                if !self.semantic().scope_id.is_global() {
                     for name in names {
-                        let binding_id = self.semantic.global_scope().get(name);
+                        let binding_id = self.semantic().global_scope().get(name);
 
                         // Mark the binding in the global scope as "rebound" in the current scope.
                         if let Some(binding_id) = binding_id {
-                            self.semantic
-                                .add_rebinding_scope(binding_id, self.semantic.scope_id);
+                            let scope_id = { self.semantic().scope_id };
+                            self.semantic_mut()
+                                .add_rebinding_scope(binding_id, scope_id);
                         }
 
                         // Add a binding to the current scope.
-                        let binding_id = self.semantic.push_binding(
+                        let binding_id = self.semantic_mut().push_binding(
                             name.range(),
                             BindingKind::Global(binding_id),
                             BindingFlags::GLOBAL,
                         );
-                        let scope = self.semantic.current_scope_mut();
+                        let mut semantic = self.semantic_mut();
+                        let scope = semantic.current_scope_mut();
                         scope.add(name, binding_id);
                     }
                 }
             }
             Stmt::Nonlocal(ast::StmtNonlocal { names, range: _ }) => {
-                if !self.semantic.scope_id.is_global() {
+                let semantic = self.semantic();
+                if !semantic.scope_id.is_global() {
+                    drop(semantic);
                     for name in names {
-                        if let Some((scope_id, binding_id)) = self.semantic.nonlocal(name) {
+                        let semantic = self.semantic();
+                        if let Some((scope_id, binding_id)) = semantic.nonlocal(name) {
+                            drop(semantic);
                             // Mark the binding as "used", since the `nonlocal` requires an existing
                             // binding.
-                            self.semantic.add_local_reference(
-                                binding_id,
-                                ExprContext::Load,
-                                name.range(),
-                            );
+                            {
+                                self.semantic_mut().add_local_reference(
+                                    binding_id,
+                                    ExprContext::Load,
+                                    name.range(),
+                                );
+                            }
 
                             // Mark the binding in the enclosing scope as "rebound" in the current
                             // scope.
-                            self.semantic
-                                .add_rebinding_scope(binding_id, self.semantic.scope_id);
+                            {
+                                let scope_id = { self.semantic().scope_id };
+                                self.semantic_mut()
+                                    .add_rebinding_scope(binding_id, scope_id);
+                            }
 
+                            let mut semantic_mut = self.semantic_mut();
                             // Add a binding to the current scope.
-                            let binding_id = self.semantic.push_binding(
+                            let binding_id = semantic_mut.push_binding(
                                 name.range(),
                                 BindingKind::Nonlocal(binding_id, scope_id),
                                 BindingFlags::NONLOCAL,
                             );
-                            let scope = self.semantic.current_scope_mut();
+                            let scope = semantic_mut.current_scope_mut();
                             scope.add(name, binding_id);
                         }
                     }
@@ -1006,10 +875,10 @@ impl<'a> Visitor<'a> for Checker<'a> {
                     self.visit_decorator(decorator);
 
                     if self
-                        .semantic
+                        .semantic()
                         .match_typing_expr(&decorator.expression, "no_type_check")
                     {
-                        self.semantic.flags |= SemanticModelFlags::NO_TYPE_CHECK;
+                        self.semantic_mut().flags |= SemanticModelFlags::NO_TYPE_CHECK;
                     }
                 }
 
@@ -1017,16 +886,16 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 // are enabled or the Python version is at least 3.14.
                 let annotation = AnnotationContext::from_function(
                     function_def,
-                    &self.semantic,
+                    &self.semantic(),
                     self.settings,
                     self.target_version(),
                 );
 
                 // The first parameter may be a single dispatch.
                 let singledispatch =
-                    flake8_type_checking::helpers::is_singledispatch_implementation(
+                    ruff_rule_flake8_type_checking::helpers::is_singledispatch_implementation(
                         function_def,
-                        self.semantic(),
+                        &self.semantic(),
                     );
 
                 // The default values of the parameters needs to be evaluated in the enclosing
@@ -1037,7 +906,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                     }
                 }
 
-                self.semantic.push_scope(ScopeKind::Type);
+                self.semantic_mut().push_scope(ScopeKind::Type);
 
                 if let Some(type_params) = type_params {
                     self.visit_type_params(type_params);
@@ -1082,24 +951,26 @@ impl<'a> Visitor<'a> for Checker<'a> {
 
                 let definition = docstrings::extraction::extract_definition(
                     ExtractionTarget::Function(function_def),
-                    self.semantic.definition_id,
-                    &self.semantic.definitions,
+                    self.semantic().definition_id,
+                    &self.semantic().definitions,
                 );
-                self.semantic.push_definition(definition);
-                self.semantic.push_scope(ScopeKind::Function(function_def));
-                self.semantic.flags -= SemanticModelFlags::EXCEPTION_HANDLER;
+                self.semantic_mut().push_definition(definition);
+                self.semantic_mut()
+                    .push_scope(ScopeKind::Function(function_def));
+                self.semantic_mut().flags -= SemanticModelFlags::EXCEPTION_HANDLER;
 
-                self.visit.functions.push(self.semantic.snapshot());
+                let snapshot = self.semantic().snapshot();
+                self.visit.functions.push(snapshot);
 
                 // Extract any global bindings from the function body.
                 if let Some(globals) = Globals::from_body(body) {
-                    self.semantic.set_globals(globals);
+                    self.semantic_mut().set_globals(globals);
                 }
-                let scope_id = self.semantic.scope_id;
+                let scope_id = self.semantic().scope_id;
                 self.analyze.scopes.push(scope_id);
-                self.semantic.pop_scope(); // Function scope
-                self.semantic.pop_definition();
-                self.semantic.pop_scope(); // Type parameter scope
+                self.semantic_mut().pop_scope(); // Function scope
+                self.semantic_mut().pop_definition();
+                self.semantic_mut().pop_scope(); // Type parameter scope
                 self.add_binding(
                     name,
                     stmt.identifier(),
@@ -1121,41 +992,41 @@ impl<'a> Visitor<'a> for Checker<'a> {
                     self.visit_decorator(decorator);
                 }
 
-                self.semantic.push_scope(ScopeKind::Type);
+                self.semantic_mut().push_scope(ScopeKind::Type);
 
                 if let Some(type_params) = type_params {
                     self.visit_type_params(type_params);
                 }
 
                 if let Some(arguments) = arguments {
-                    self.semantic.flags |= SemanticModelFlags::CLASS_BASE;
+                    self.semantic_mut().flags |= SemanticModelFlags::CLASS_BASE;
                     self.visit_arguments(arguments);
-                    self.semantic.flags -= SemanticModelFlags::CLASS_BASE;
+                    self.semantic_mut().flags -= SemanticModelFlags::CLASS_BASE;
                 }
 
                 let definition = docstrings::extraction::extract_definition(
                     ExtractionTarget::Class(class_def),
-                    self.semantic.definition_id,
-                    &self.semantic.definitions,
+                    self.semantic().definition_id,
+                    &self.semantic().definitions,
                 );
-                self.semantic.push_definition(definition);
-                self.semantic.push_scope(ScopeKind::Class(class_def));
-                self.semantic.flags -= SemanticModelFlags::EXCEPTION_HANDLER;
+                self.semantic_mut().push_definition(definition);
+                self.semantic_mut().push_scope(ScopeKind::Class(class_def));
+                self.semantic_mut().flags -= SemanticModelFlags::EXCEPTION_HANDLER;
 
                 // Extract any global bindings from the class body.
                 if let Some(globals) = Globals::from_body(body) {
-                    self.semantic.set_globals(globals);
+                    self.semantic_mut().set_globals(globals);
                 }
 
                 // Set the docstring state before visiting the class body.
                 self.docstring_state = DocstringState::Expected(ExpectedDocstringKind::Class);
                 self.visit_body(body);
 
-                let scope_id = self.semantic.scope_id;
+                let scope_id = self.semantic().scope_id;
                 self.analyze.scopes.push(scope_id);
-                self.semantic.pop_scope(); // Class scope
-                self.semantic.pop_definition();
-                self.semantic.pop_scope(); // Type parameter scope
+                self.semantic_mut().pop_scope(); // Class scope
+                self.semantic_mut().pop_definition();
+                self.semantic_mut().pop_scope(); // Type parameter scope
                 self.add_binding(
                     name,
                     stmt.identifier(),
@@ -1169,12 +1040,12 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 type_params,
                 value,
             }) => {
-                self.semantic.push_scope(ScopeKind::Type);
+                self.semantic_mut().push_scope(ScopeKind::Type);
                 if let Some(type_params) = type_params {
                     self.visit_type_params(type_params);
                 }
                 self.visit_deferred_type_alias_value(value);
-                self.semantic.pop_scope();
+                self.semantic_mut().pop_scope();
                 self.visit_expr(name);
             }
             Stmt::Try(
@@ -1189,27 +1060,28 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 // Iterate over the `body`, then the `handlers`, then the `orelse`, then the
                 // `finalbody`, but treat the body and the `orelse` as a single branch for
                 // flow analysis purposes.
-                let branch = self.semantic.push_branch();
+                let branch = self.semantic.borrow_mut().push_branch();
                 self.semantic
+                    .borrow_mut()
                     .handled_exceptions
-                    .push(Exceptions::from_try_stmt(try_node, &self.semantic));
+                    .push(Exceptions::from_try_stmt(try_node, &self.semantic.borrow()));
                 self.visit_body(body);
-                self.semantic.handled_exceptions.pop();
-                self.semantic.pop_branch();
+                self.semantic.borrow_mut().handled_exceptions.pop();
+                self.semantic.borrow_mut().pop_branch();
 
                 for except_handler in handlers {
-                    self.semantic.push_branch();
+                    self.semantic.borrow_mut().push_branch();
                     self.visit_except_handler(except_handler);
-                    self.semantic.pop_branch();
+                    self.semantic.borrow_mut().pop_branch();
                 }
 
-                self.semantic.set_branch(branch);
+                self.semantic.borrow_mut().set_branch(branch);
                 self.visit_body(orelse);
-                self.semantic.pop_branch();
+                self.semantic.borrow_mut().pop_branch();
 
-                self.semantic.push_branch();
+                self.semantic.borrow_mut().push_branch();
                 self.visit_body(finalbody);
-                self.semantic.pop_branch();
+                self.semantic.borrow_mut().pop_branch();
             }
             Stmt::AnnAssign(ast::StmtAnnAssign {
                 target,
@@ -1217,23 +1089,27 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 value,
                 ..
             }) => {
+                let semantic = self.semantic();
                 match AnnotationContext::from_model(
-                    &self.semantic,
+                    &semantic,
                     self.settings,
                     self.target_version(),
                 ) {
                     AnnotationContext::RuntimeRequired => {
+                        drop(semantic);
                         self.visit_runtime_required_annotation(annotation);
                     }
                     AnnotationContext::RuntimeEvaluated => {
+                        drop(semantic);
                         self.visit_runtime_evaluated_annotation(annotation);
                     }
                     AnnotationContext::TypingOnly
-                        if flake8_type_checking::helpers::is_dataclass_meta_annotation(
+                        if ruff_rule_flake8_type_checking::helpers::is_dataclass_meta_annotation(
                             annotation,
-                            self.semantic(),
+                            &semantic,
                         ) =>
                     {
+                        drop(semantic);
                         if let Expr::Subscript(subscript) = &**annotation {
                             // Ex) `InitVar[str]`
                             self.visit_runtime_required_annotation(&subscript.value);
@@ -1243,11 +1119,14 @@ impl<'a> Visitor<'a> for Checker<'a> {
                             self.visit_runtime_required_annotation(annotation);
                         }
                     }
-                    AnnotationContext::TypingOnly => self.visit_annotation(annotation),
+                    AnnotationContext::TypingOnly => {
+                        drop(semantic);
+                        self.visit_annotation(annotation);
+                    },
                 }
 
                 if let Some(expr) = value {
-                    if self.semantic.match_typing_expr(annotation, "TypeAlias") {
+                    if self.semantic().match_typing_expr(annotation, "TypeAlias") {
                         self.visit_annotated_type_alias_value(expr);
                     } else {
                         self.visit_expr(expr);
@@ -1260,13 +1139,13 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 msg,
                 range: _,
             }) => {
-                let snapshot = self.semantic.flags;
-                self.semantic.flags |= SemanticModelFlags::ASSERT_STATEMENT;
+                let snapshot = self.semantic().flags;
+                self.semantic_mut().flags |= SemanticModelFlags::ASSERT_STATEMENT;
                 self.visit_boolean_test(test);
                 if let Some(expr) = msg {
                     self.visit_expr(expr);
                 }
-                self.semantic.flags = snapshot;
+                self.semantic_mut().flags = snapshot;
             }
             Stmt::With(ast::StmtWith {
                 items,
@@ -1277,9 +1156,9 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 for item in items {
                     self.visit_with_item(item);
                 }
-                self.semantic.push_branch();
+                self.semantic_mut().push_branch();
                 self.visit_body(body);
-                self.semantic.pop_branch();
+                self.semantic_mut().pop_branch();
             }
             Stmt::While(ast::StmtWhile {
                 test,
@@ -1301,21 +1180,21 @@ impl<'a> Visitor<'a> for Checker<'a> {
             ) => {
                 self.visit_boolean_test(test);
 
-                self.semantic.push_branch();
-                if typing::is_type_checking_block(stmt_if, &self.semantic) {
-                    if self.semantic.at_top_level() {
-                        self.importer.visit_type_checking_block(stmt);
+                self.semantic_mut().push_branch();
+                if typing::is_type_checking_block(stmt_if, &self.semantic()) {
+                    if self.semantic().at_top_level() {
+                        self.importer.borrow_mut().visit_type_checking_block(stmt);
                     }
                     self.visit_type_checking_block(body);
                 } else {
                     self.visit_body(body);
                 }
-                self.semantic.pop_branch();
+                self.semantic_mut().pop_branch();
 
                 for clause in elif_else_clauses {
-                    self.semantic.push_branch();
+                    self.semantic_mut().push_branch();
                     self.visit_elif_else_clause(clause);
-                    self.semantic.pop_branch();
+                    self.semantic_mut().pop_branch();
                 }
             }
             _ => visitor::walk_stmt(self, stmt),
@@ -1344,16 +1223,16 @@ impl<'a> Visitor<'a> for Checker<'a> {
         // Step 4: Analysis
         analyze::statement(stmt, self);
 
-        self.semantic.flags = flags_snapshot;
-        self.semantic.pop_node();
+        self.semantic_mut().flags = flags_snapshot;
+        self.semantic_mut().pop_node();
         self.last_stmt_end = stmt.end();
     }
 
     fn visit_annotation(&mut self, expr: &'a Expr) {
-        let flags_snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::TYPING_ONLY_ANNOTATION;
+        let flags_snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::TYPING_ONLY_ANNOTATION;
         self.visit_type_definition(expr);
-        self.semantic.flags = flags_snapshot;
+        self.semantic_mut().flags = flags_snapshot;
     }
 
     fn visit_expr(&mut self, expr: &'a Expr) {
@@ -1361,41 +1240,41 @@ impl<'a> Visitor<'a> for Checker<'a> {
 
         // Step 0: Pre-processing
         if self.source_type.is_stub()
-            && self.semantic.in_class_base()
-            && !self.semantic.in_deferred_class_base()
+            && self.semantic().in_class_base()
+            && !self.semantic().in_deferred_class_base()
         {
             self.visit
                 .class_bases
-                .push((expr, self.semantic.snapshot()));
+                .push((expr, self.semantic.borrow().snapshot()));
             return;
         }
 
-        if !self.semantic.in_typing_literal()
+        if !self.semantic().in_typing_literal()
             // `in_deferred_type_definition()` will only be `true` if we're now visiting the deferred nodes
             // after having already traversed the source tree once. If we're now visiting the deferred nodes,
             // we can't defer again, or we'll infinitely recurse!
-            && !self.semantic.in_deferred_type_definition()
-            && self.semantic.in_type_definition()
-            && (self.semantic.future_annotations_or_stub()||self.target_version().defers_annotations())
-            && (self.semantic.in_annotation() || self.source_type.is_stub())
+            && !self.semantic().in_deferred_type_definition()
+            && self.semantic().in_type_definition()
+            && (self.semantic().future_annotations_or_stub()||self.target_version().defers_annotations())
+            && (self.semantic().in_annotation() || self.source_type.is_stub())
         {
             if let Expr::StringLiteral(string_literal) = expr {
                 self.visit
                     .string_type_definitions
-                    .push((string_literal, self.semantic.snapshot()));
+                    .push((string_literal, self.semantic.borrow().snapshot()));
             } else {
                 self.visit
                     .future_type_definitions
-                    .push((expr, self.semantic.snapshot()));
+                    .push((expr, self.semantic.borrow().snapshot()));
             }
             return;
         }
 
-        self.semantic.push_node(expr);
+        self.semantic_mut().push_node(expr);
 
         // Store the flags prior to any further descent, so that we can restore them after visiting
         // the node.
-        let flags_snapshot = self.semantic.flags;
+        let flags_snapshot = self.semantic().flags;
 
         // If we're in a boolean test (e.g., the `test` of a `Stmt::If`), but now within a
         // subexpression (e.g., `a` in `f(a)`), then we're no longer in a boolean test.
@@ -1407,7 +1286,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                     ..
                 })
         ) {
-            self.semantic.flags -= SemanticModelFlags::BOOLEAN_TEST;
+            self.semantic_mut().flags -= SemanticModelFlags::BOOLEAN_TEST;
         }
 
         // Step 1: Binding
@@ -1419,7 +1298,8 @@ impl<'a> Visitor<'a> for Checker<'a> {
             }) => {
                 if let Expr::Name(ast::ExprName { id, ctx, range: _ }) = func.as_ref() {
                     if id == "locals" && ctx.is_load() {
-                        let scope = self.semantic.current_scope_mut();
+                        let mut semantic = self.semantic_mut();
+                        let scope = semantic.current_scope_mut();
                         scope.set_uses_locals();
                     }
                 }
@@ -1487,9 +1367,9 @@ impl<'a> Visitor<'a> for Checker<'a> {
                     }
                 }
 
-                self.semantic.push_scope(ScopeKind::Lambda(lambda));
-                self.visit.lambdas.push(self.semantic.snapshot());
-                self.analyze.lambdas.push(self.semantic.snapshot());
+                self.semantic_mut().push_scope(ScopeKind::Lambda(lambda));
+                self.visit.lambdas.push(self.semantic.borrow().snapshot());
+                self.analyze.lambdas.push(self.semantic.borrow().snapshot());
             }
             Expr::If(ast::ExprIf {
                 test,
@@ -1516,36 +1396,36 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 self.visit_expr(func);
 
                 let callable =
-                    self.semantic
+                    self.semantic()
                         .resolve_qualified_name(func)
                         .and_then(|qualified_name| {
                             if self
-                                .semantic
+                                .semantic()
                                 .match_typing_qualified_name(&qualified_name, "cast")
                             {
                                 Some(typing::Callable::Cast)
                             } else if self
-                                .semantic
+                                .semantic()
                                 .match_typing_qualified_name(&qualified_name, "NewType")
                             {
                                 Some(typing::Callable::NewType)
                             } else if self
-                                .semantic
+                                .semantic()
                                 .match_typing_qualified_name(&qualified_name, "TypeVar")
                             {
                                 Some(typing::Callable::TypeVar)
                             } else if self
-                                .semantic
+                                .semantic()
                                 .match_typing_qualified_name(&qualified_name, "TypeAliasType")
                             {
                                 Some(typing::Callable::TypeAliasType)
                             } else if self
-                                .semantic
+                                .semantic()
                                 .match_typing_qualified_name(&qualified_name, "NamedTuple")
                             {
                                 Some(typing::Callable::NamedTuple)
                             } else if self
-                                .semantic
+                                .semantic()
                                 .match_typing_qualified_name(&qualified_name, "TypedDict")
                             {
                                 Some(typing::Callable::TypedDict)
@@ -1788,34 +1668,38 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 // `obj["foo"]["bar"]`, we need to avoid treating the `obj["foo"]`
                 // portion as an annotation, despite having `ExprContext::Load`. Thus, we track
                 // the `ExprContext` at the top-level.
-                if self.semantic.in_subscript() {
+                if self.semantic().in_subscript() {
                     visitor::walk_expr(self, expr);
                 } else if matches!(ctx, ExprContext::Store | ExprContext::Del) {
-                    self.semantic.flags |= SemanticModelFlags::SUBSCRIPT;
+                    self.semantic_mut().flags |= SemanticModelFlags::SUBSCRIPT;
                     visitor::walk_expr(self, expr);
                 } else {
                     self.visit_expr(value);
 
+                    let semantic = self.semantic();
                     match typing::match_annotated_subscript(
                         value,
-                        &self.semantic,
+                        &semantic,
                         self.settings.typing_modules.iter().map(String::as_str),
                         &self.settings.pyflakes.extend_generics,
                     ) {
                         // Ex) Literal["Class"]
                         Some(typing::SubscriptKind::Literal) => {
-                            self.semantic.flags |= SemanticModelFlags::TYPING_LITERAL;
+                            drop(semantic);
+                            self.semantic_mut().flags |= SemanticModelFlags::TYPING_LITERAL;
 
                             self.visit_expr(slice);
                             self.visit_expr_context(ctx);
                         }
                         // Ex) Optional[int]
                         Some(typing::SubscriptKind::Generic) => {
+                            drop(semantic);
                             self.visit_type_definition(slice);
                             self.visit_expr_context(ctx);
                         }
                         // Ex) Annotated[int, "Hello, world!"]
                         Some(typing::SubscriptKind::PEP593Annotation) => {
+                            drop(semantic);
                             // First argument is a type (including forward references); the
                             // rest are arbitrary Python objects.
                             if let Expr::Tuple(ast::ExprTuple {
@@ -1834,7 +1718,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                                 }
                                 self.visit_expr_context(ctx);
                             } else {
-                                if self.semantic.in_type_definition() {
+                                if self.semantic().in_type_definition() {
                                     // this should potentially trigger some kind of violation in the
                                     // future, since it would indicate an invalid type expression
                                     debug!("Found non-Expr::Tuple argument to PEP 593 Annotation.");
@@ -1846,6 +1730,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                             }
                         }
                         Some(typing::SubscriptKind::TypedDict) => {
+                            drop(semantic);
                             if let Expr::Dict(ast::ExprDict { items, range: _ }) = slice.as_ref() {
                                 for item in items {
                                     if let Some(key) = &item.key {
@@ -1860,6 +1745,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
                             }
                         }
                         None => {
+                            drop(semantic);
                             self.visit_expr(slice);
                             self.visit_expr_context(ctx);
                         }
@@ -1867,14 +1753,14 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 }
             }
             Expr::StringLiteral(string_literal) => {
-                if self.semantic.in_type_definition() && !self.semantic.in_typing_literal() {
+                if self.semantic().in_type_definition() && !self.semantic().in_typing_literal() {
                     self.visit
                         .string_type_definitions
-                        .push((string_literal, self.semantic.snapshot()));
+                        .push((string_literal, self.semantic.borrow().snapshot()));
                 }
             }
             Expr::FString(_) => {
-                self.semantic.flags |= SemanticModelFlags::F_STRING;
+                self.semantic_mut().flags |= SemanticModelFlags::F_STRING;
                 visitor::walk_expr(self, expr);
             }
             Expr::Named(ast::ExprNamed {
@@ -1884,7 +1770,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
             }) => {
                 self.visit_expr(value);
 
-                self.semantic.flags |= SemanticModelFlags::NAMED_EXPRESSION_ASSIGNMENT;
+                self.semantic_mut().flags |= SemanticModelFlags::NAMED_EXPRESSION_ASSIGNMENT;
                 self.visit_expr(target);
             }
             _ => visitor::walk_expr(self, expr),
@@ -1897,8 +1783,8 @@ impl<'a> Visitor<'a> for Checker<'a> {
             | Expr::ListComp(_)
             | Expr::DictComp(_)
             | Expr::SetComp(_) => {
-                self.analyze.scopes.push(self.semantic.scope_id);
-                self.semantic.pop_scope();
+                self.analyze.scopes.push(self.semantic.borrow().scope_id);
+                self.semantic_mut().pop_scope();
             }
             _ => {}
         }
@@ -1913,14 +1799,14 @@ impl<'a> Visitor<'a> for Checker<'a> {
             _ => {}
         }
 
-        self.semantic.flags = flags_snapshot;
+        self.semantic_mut().flags = flags_snapshot;
         analyze::expression(expr, self);
-        self.semantic.pop_node();
+        self.semantic_mut().pop_node();
     }
 
     fn visit_except_handler(&mut self, except_handler: &'a ExceptHandler) {
-        let flags_snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::EXCEPTION_HANDLER;
+        let flags_snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::EXCEPTION_HANDLER;
 
         // Step 1: Binding
         let binding = match except_handler {
@@ -1932,7 +1818,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
             }) => {
                 if let Some(name) = name {
                     // Store the existing binding, if any.
-                    let binding_id = self.semantic.lookup_symbol(name.as_str());
+                    let binding_id = self.semantic().lookup_symbol(name.as_str());
 
                     // Add the bound exception name to the scope.
                     self.add_binding(
@@ -1965,7 +1851,7 @@ impl<'a> Visitor<'a> for Checker<'a> {
         // Step 4: Analysis
         analyze::except_handler(except_handler, self);
 
-        self.semantic.flags = flags_snapshot;
+        self.semantic_mut().flags = flags_snapshot;
     }
 
     fn visit_parameters(&mut self, parameters: &'a Parameters) {
@@ -2036,9 +1922,9 @@ impl<'a> Visitor<'a> for Checker<'a> {
             self.visit_boolean_test(expr);
         }
 
-        self.semantic.push_branch();
+        self.semantic_mut().push_branch();
         self.visit_body(&match_case.body);
-        self.semantic.pop_branch();
+        self.semantic_mut().pop_branch();
     }
 
     fn visit_type_param(&mut self, type_param: &'a ast::TypeParam) {
@@ -2063,15 +1949,12 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 name: _,
                 range: _,
             }) => {
+                let snapshot = self.semantic().snapshot();
                 if let Some(expr) = bound {
-                    self.visit
-                        .type_param_definitions
-                        .push((expr, self.semantic.snapshot()));
+                    self.visit.type_param_definitions.push((expr, snapshot));
                 }
                 if let Some(expr) = default {
-                    self.visit
-                        .type_param_definitions
-                        .push((expr, self.semantic.snapshot()));
+                    self.visit.type_param_definitions.push((expr, snapshot));
                 }
             }
             ast::TypeParam::TypeVarTuple(ast::TypeParamTypeVarTuple {
@@ -2080,9 +1963,8 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 range: _,
             }) => {
                 if let Some(expr) = default {
-                    self.visit
-                        .type_param_definitions
-                        .push((expr, self.semantic.snapshot()));
+                    let snapshot = self.semantic().snapshot();
+                    self.visit.type_param_definitions.push((expr, snapshot));
                 }
             }
             ast::TypeParam::ParamSpec(ast::TypeParamParamSpec {
@@ -2091,21 +1973,20 @@ impl<'a> Visitor<'a> for Checker<'a> {
                 range: _,
             }) => {
                 if let Some(expr) = default {
-                    self.visit
-                        .type_param_definitions
-                        .push((expr, self.semantic.snapshot()));
+                    let snapshot = self.semantic().snapshot();
+                    self.visit.type_param_definitions.push((expr, snapshot));
                 }
             }
         }
     }
 
     fn visit_f_string_element(&mut self, f_string_element: &'a FStringElement) {
-        let snapshot = self.semantic.flags;
+        let snapshot = self.semantic().flags;
         if f_string_element.is_expression() {
-            self.semantic.flags |= SemanticModelFlags::F_STRING_REPLACEMENT_FIELD;
+            self.semantic_mut().flags |= SemanticModelFlags::F_STRING_REPLACEMENT_FIELD;
         }
         visitor::walk_f_string_element(self, f_string_element);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 }
 
@@ -2114,7 +1995,7 @@ impl<'a> Checker<'a> {
     fn visit_module(&mut self, python_ast: &'a Suite) {
         // Extract any global bindings from the module body.
         if let Some(globals) = Globals::from_body(python_ast) {
-            self.semantic.set_globals(globals);
+            self.semantic_mut().set_globals(globals);
         }
         analyze::module(python_ast, self);
     }
@@ -2128,7 +2009,7 @@ impl<'a> Checker<'a> {
             unreachable!("Generator expression must contain at least one generator");
         };
 
-        let flags = self.semantic.flags;
+        let flags = self.semantic().flags;
 
         // Generators are compiled as nested functions. (This may change with PEP 709.)
         // As such, the `iter` of the first generator is evaluated in the outer scope, while all
@@ -2158,13 +2039,13 @@ impl<'a> Checker<'a> {
         // while all subsequent reads and writes are evaluated in the inner scope. In particular,
         // `x` is local to `foo`, and the `T` in `y=T` skips the class scope when resolving.
         self.visit_expr(&generator.iter);
-        self.semantic.push_scope(ScopeKind::Generator {
+        self.semantic_mut().push_scope(ScopeKind::Generator {
             kind,
             is_async: generators.iter().any(|gen| gen.is_async),
         });
 
         self.visit_expr(&generator.target);
-        self.semantic.flags = flags;
+        self.semantic_mut().flags = flags;
 
         for expr in &generator.ifs {
             self.visit_boolean_test(expr);
@@ -2174,7 +2055,7 @@ impl<'a> Checker<'a> {
             self.visit_expr(&generator.iter);
 
             self.visit_expr(&generator.target);
-            self.semantic.flags = flags;
+            self.semantic_mut().flags = flags;
 
             for expr in &generator.ifs {
                 self.visit_boolean_test(expr);
@@ -2183,32 +2064,32 @@ impl<'a> Checker<'a> {
 
         // Step 4: Analysis
         for generator in generators {
-            analyze::comprehension(generator, self);
+            analyze::comprehension(generator, &self.snapshot());
         }
     }
 
     /// Visit an body of [`Stmt`] nodes within a type-checking block.
     fn visit_type_checking_block(&mut self, body: &'a [Stmt]) {
-        let snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::TYPE_CHECKING_BLOCK;
+        let snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::TYPE_CHECKING_BLOCK;
         self.visit_body(body);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 
     /// Visit an [`Expr`], and treat it as a runtime-evaluated type annotation.
     fn visit_runtime_evaluated_annotation(&mut self, expr: &'a Expr) {
-        let snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::RUNTIME_EVALUATED_ANNOTATION;
+        let snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::RUNTIME_EVALUATED_ANNOTATION;
         self.visit_type_definition(expr);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 
     /// Visit an [`Expr`], and treat it as a runtime-required type annotation.
     fn visit_runtime_required_annotation(&mut self, expr: &'a Expr) {
-        let snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::RUNTIME_REQUIRED_ANNOTATION;
+        let snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::RUNTIME_REQUIRED_ANNOTATION;
         self.visit_type_definition(expr);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 
     /// Visit an [`Expr`], and treat it as the value expression
@@ -2223,10 +2104,10 @@ impl<'a> Checker<'a> {
     ///
     /// [PEP 613]: https://peps.python.org/pep-0613/
     fn visit_annotated_type_alias_value(&mut self, expr: &'a Expr) {
-        let snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::ANNOTATED_TYPE_ALIAS;
+        let snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::ANNOTATED_TYPE_ALIAS;
         self.visit_type_definition(expr);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 
     /// Visit an [`Expr`], and treat it as the value expression
@@ -2239,31 +2120,31 @@ impl<'a> Checker<'a> {
     ///
     /// [PEP 695]: https://peps.python.org/pep-0695/#generic-type-alias
     fn visit_deferred_type_alias_value(&mut self, expr: &'a Expr) {
-        let snapshot = self.semantic.flags;
+        let flags = self.semantic().flags;
         // even though we don't visit these nodes immediately we need to
         // modify the semantic flags before we push the expression and its
         // corresponding semantic snapshot
-        self.semantic.flags |= SemanticModelFlags::DEFERRED_TYPE_ALIAS;
-        self.visit
-            .type_param_definitions
-            .push((expr, self.semantic.snapshot()));
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags |= SemanticModelFlags::DEFERRED_TYPE_ALIAS;
+        let snapshot = self.semantic().snapshot();
+        self.visit.type_param_definitions.push((expr, snapshot));
+
+        self.semantic_mut().flags = flags;
     }
 
     /// Visit an [`Expr`], and treat it as a type definition.
     fn visit_type_definition(&mut self, expr: &'a Expr) {
-        let snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::TYPE_DEFINITION;
+        let snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::TYPE_DEFINITION;
         self.visit_expr(expr);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 
     /// Visit an [`Expr`], and treat it as _not_ a type definition.
     fn visit_non_type_definition(&mut self, expr: &'a Expr) {
-        let snapshot = self.semantic.flags;
-        self.semantic.flags -= SemanticModelFlags::TYPE_DEFINITION;
+        let snapshot = self.semantic().flags;
+        self.semantic_mut().flags -= SemanticModelFlags::TYPE_DEFINITION;
         self.visit_expr(expr);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 
     /// Visit an [`Expr`], and treat it as the `typ` argument to `typing.cast`.
@@ -2271,7 +2152,7 @@ impl<'a> Checker<'a> {
         self.visit_type_definition(arg);
 
         if !self.source_type.is_stub() && self.enabled(Rule::RuntimeCastValue) {
-            flake8_type_checking::rules::runtime_cast_value(self, arg);
+            ruff_rule_flake8_type_checking::rules::runtime_cast_value(&self.snapshot(), arg);
         }
     }
 
@@ -2279,10 +2160,10 @@ impl<'a> Checker<'a> {
     /// expressions return value is significant, or whether the calling context only relies on
     /// its truthiness.
     fn visit_boolean_test(&mut self, expr: &'a Expr) {
-        let snapshot = self.semantic.flags;
-        self.semantic.flags |= SemanticModelFlags::BOOLEAN_TEST;
+        let snapshot = self.semantic().flags;
+        self.semantic_mut().flags |= SemanticModelFlags::BOOLEAN_TEST;
         self.visit_expr(expr);
-        self.semantic.flags = snapshot;
+        self.semantic_mut().flags = snapshot;
     }
 
     /// Visit an [`ElifElseClause`]
@@ -2306,42 +2187,44 @@ impl<'a> Checker<'a> {
         // expressions in generators and comprehensions bind to the scope that contains the
         // outermost comprehension.
         let scope_id = if kind.is_named_expr_assignment() {
-            self.semantic
+            self.semantic()
                 .scopes
-                .ancestor_ids(self.semantic.scope_id)
-                .find_or_last(|scope_id| !self.semantic.scopes[*scope_id].kind.is_generator())
-                .unwrap_or(self.semantic.scope_id)
+                .ancestor_ids(self.semantic().scope_id)
+                .find_or_last(|scope_id| !self.semantic().scopes[*scope_id].kind.is_generator())
+                .unwrap_or(self.semantic().scope_id)
         } else {
-            self.semantic.scope_id
+            self.semantic().scope_id
         };
 
-        if self.semantic.in_exception_handler() {
+        if self.semantic().in_exception_handler() {
             flags |= BindingFlags::IN_EXCEPT_HANDLER;
         }
-        if self.semantic.in_assert_statement() {
+        if self.semantic().in_assert_statement() {
             flags |= BindingFlags::IN_ASSERT_STATEMENT;
         }
 
         // Create the `Binding`.
-        let binding_id = self.semantic.push_binding(range, kind, flags);
+        let binding_id = self.semantic_mut().push_binding(range, kind, flags);
 
         // If the name is private, mark is as such.
         if name.starts_with('_') {
-            self.semantic.bindings[binding_id].flags |= BindingFlags::PRIVATE_DECLARATION;
+            self.semantic_mut().bindings[binding_id].flags |= BindingFlags::PRIVATE_DECLARATION;
         }
 
+        let semantic = self.semantic();
         // If there's an existing binding in this scope, copy its references.
-        if let Some(shadowed_id) = self.semantic.scopes[scope_id].get(name) {
+        if let Some(shadowed_id) = semantic.scopes[scope_id].get(name) {
             // If this is an annotation, and we already have an existing value in the same scope,
             // don't treat it as an assignment, but track it as a delayed annotation.
-            if self.semantic.binding(binding_id).kind.is_annotation() {
-                self.semantic
+            if semantic.binding(binding_id).kind.is_annotation() {
+                drop(semantic);
+                self.semantic_mut()
                     .add_delayed_annotation(shadowed_id, binding_id);
                 return binding_id;
             }
 
             // Avoid shadowing builtins.
-            let shadowed = &self.semantic.bindings[shadowed_id];
+            let shadowed = &semantic.bindings[shadowed_id];
             if !matches!(
                 shadowed.kind,
                 BindingKind::Builtin | BindingKind::Deletion | BindingKind::UnboundException(_)
@@ -2350,56 +2233,76 @@ impl<'a> Checker<'a> {
                 let is_global = shadowed.is_global();
                 let is_nonlocal = shadowed.is_nonlocal();
 
+                drop(semantic);
                 // If the shadowed binding was global, then this one is too.
                 if is_global {
-                    self.semantic.bindings[binding_id].flags |= BindingFlags::GLOBAL;
+                    self.semantic_mut().bindings[binding_id].flags |= BindingFlags::GLOBAL;
                 }
 
                 // If the shadowed binding was non-local, then this one is too.
                 if is_nonlocal {
-                    self.semantic.bindings[binding_id].flags |= BindingFlags::NONLOCAL;
+                    self.semantic_mut().bindings[binding_id].flags |= BindingFlags::NONLOCAL;
                 }
 
-                self.semantic.bindings[binding_id].references = references;
+                self.semantic_mut().bindings[binding_id].references = references;
             }
-        } else if let Some(shadowed_id) = self
-            .semantic
+        } else if let Some(shadowed_id) = semantic
             .scopes
+            .clone()
             .ancestors(scope_id)
             .skip(1)
             .filter(|scope| scope.kind.is_function() || scope.kind.is_module())
             .find_map(|scope| scope.get(name))
         {
+            drop(semantic);
             // Otherwise, if there's an existing binding in a parent scope, mark it as shadowed.
-            self.semantic
+            self.semantic_mut()
                 .shadowed_bindings
                 .insert(binding_id, shadowed_id);
+        } else {
+            drop(semantic);
+            // Add the binding to the scope.
+            let scope = &mut self.semantic_mut().scopes[scope_id];
+            scope.add(name, binding_id);
         }
-
-        // Add the binding to the scope.
-        let scope = &mut self.semantic.scopes[scope_id];
-        scope.add(name, binding_id);
 
         binding_id
     }
 
     fn bind_builtins(&mut self) {
         let target_version = self.target_version();
-        let mut bind_builtin = |builtin| {
-            // Add the builtin to the scope.
-            let binding_id = self.semantic.push_builtin();
-            let scope = self.semantic.global_scope_mut();
-            scope.add(builtin, binding_id);
-        };
+        // let mut bind_builtin = |builtin| {
+        //     let mut semantic = self.semantic_mut();
+        //     // Add the builtin to the scope.
+        //     let binding_id = semantic.push_builtin();
+        //     let scope = semantic.global_scope_mut();
+        //     scope.add(builtin, binding_id);
+        // };
         let standard_builtins = python_builtins(target_version.minor, self.source_type.is_ipynb());
+        let mut semantic = self.semantic_mut();
         for builtin in standard_builtins {
-            bind_builtin(builtin);
+            // bind_builtin(builtin);
+            // Add the builtin to the scope.
+            let binding_id = semantic.push_builtin();
+            let scope = semantic.global_scope_mut();
+            scope.add(builtin, binding_id);
         }
         for builtin in MAGIC_GLOBALS {
-            bind_builtin(builtin);
+            // bind_builtin(builtin);
+            // Add the builtin to the scope.
+            let binding_id = semantic.push_builtin();
+            let scope = semantic.global_scope_mut();
+            scope.add(builtin, binding_id);
         }
+
+        drop(semantic);
         for builtin in &self.settings.builtins {
-            bind_builtin(builtin);
+            // bind_builtin(builtin);
+            // Add the builtin to the scope.
+            let mut semantic = self.semantic_mut();
+            let binding_id = semantic.push_builtin();
+            let scope = semantic.global_scope_mut();
+            scope.add(&builtin, binding_id);
         }
     }
 
@@ -2407,11 +2310,12 @@ impl<'a> Checker<'a> {
         let Expr::Name(expr) = expr else {
             return;
         };
-        self.semantic.resolve_load(expr);
+        self.semantic_mut().resolve_load(expr);
     }
 
     fn handle_node_store(&mut self, id: &'a str, expr: &Expr) {
-        let parent = self.semantic.current_statement();
+        let semantic = self.semantic();
+        let parent = semantic.current_statement();
 
         let mut flags = BindingFlags::empty();
         if helpers::is_unpacking_assignment(parent, expr) {
@@ -2426,14 +2330,14 @@ impl<'a> Checker<'a> {
                 //       so the semantic flag for the type alias sticks around
                 //       until after we've handled this store, so we can check
                 //       the flag instead of duplicating this check
-                if self.semantic.match_typing_expr(annotation, "TypeAlias") {
+                if semantic.match_typing_expr(annotation, "TypeAlias") {
                     flags.insert(BindingFlags::ANNOTATED_TYPE_ALIAS);
                 }
             }
             _ => {}
         }
 
-        let scope = self.semantic.current_scope();
+        let scope = semantic.current_scope();
 
         if scope.kind.is_module()
             && match parent {
@@ -2461,7 +2365,7 @@ impl<'a> Checker<'a> {
                 _ => false,
             }
         {
-            let (all_names, all_flags) = self.semantic.extract_dunder_all_names(parent);
+            let (all_names, all_flags) = semantic.extract_dunder_all_names(parent);
 
             if all_flags.intersects(DunderAllFlags::INVALID_OBJECT) {
                 flags |= BindingFlags::INVALID_ALL_OBJECT;
@@ -2470,6 +2374,7 @@ impl<'a> Checker<'a> {
                 flags |= BindingFlags::INVALID_ALL_FORMAT;
             }
 
+            drop(semantic);
             self.add_binding(
                 id,
                 expr.range(),
@@ -2487,7 +2392,8 @@ impl<'a> Checker<'a> {
         // if (x := 10) > 5:
         //     ...
         // ```
-        if self.semantic.in_named_expression_assignment() {
+        if semantic.in_named_expression_assignment() {
+            drop(semantic);
             self.add_binding(id, expr.range(), BindingKind::NamedExprAssignment, flags);
             return;
         }
@@ -2498,8 +2404,9 @@ impl<'a> Checker<'a> {
         if matches!(
             parent,
             Stmt::AnnAssign(ast::StmtAnnAssign { value: None, .. })
-        ) && !self.semantic.in_annotation()
+        ) && !semantic.in_annotation()
         {
+            drop(semantic);
             self.add_binding(id, expr.range(), BindingKind::Annotation, flags);
             return;
         }
@@ -2510,6 +2417,7 @@ impl<'a> Checker<'a> {
         //     ...
         // ```
         if parent.is_for_stmt() {
+            drop(semantic);
             self.add_binding(id, expr.range(), BindingKind::LoopVar, flags);
             return;
         }
@@ -2520,10 +2428,12 @@ impl<'a> Checker<'a> {
         //     ...
         // ```
         if parent.is_with_stmt() {
+            drop(semantic);
             self.add_binding(id, expr.range(), BindingKind::WithItemVar, flags);
             return;
         }
 
+        drop(semantic);
         self.add_binding(id, expr.range(), BindingKind::Assignment, flags);
     }
 
@@ -2532,17 +2442,20 @@ impl<'a> Checker<'a> {
             return;
         };
 
-        self.semantic.resolve_del(id, expr.range());
+        self.semantic_mut().resolve_del(id, expr.range());
 
-        if helpers::on_conditional_branch(&mut self.semantic.current_statements()) {
+        if helpers::on_conditional_branch(&mut self.semantic().current_statements()) {
             return;
         }
 
         // Create a binding to model the deletion.
-        let binding_id =
-            self.semantic
-                .push_binding(expr.range(), BindingKind::Deletion, BindingFlags::empty());
-        let scope = self.semantic.current_scope_mut();
+        let binding_id = self.semantic_mut().push_binding(
+            expr.range(),
+            BindingKind::Deletion,
+            BindingFlags::empty(),
+        );
+        let mut semantic = self.semantic_mut();
+        let scope = semantic.current_scope_mut();
         scope.add(id, binding_id);
     }
 
@@ -2558,19 +2471,19 @@ impl<'a> Checker<'a> {
     /// class Bar: ...
     /// ```
     fn visit_deferred_class_bases(&mut self) {
-        let snapshot = self.semantic.snapshot();
+        let snapshot = self.semantic().snapshot();
         let deferred_bases = std::mem::take(&mut self.visit.class_bases);
         debug_assert!(
             self.source_type.is_stub() || deferred_bases.is_empty(),
             "Class bases should never be deferred outside of stub files"
         );
         for (expr, snapshot) in deferred_bases {
-            self.semantic.restore(snapshot);
+            self.semantic_mut().restore(snapshot);
             // Set this flag to avoid infinite recursion, or we'll just defer it again:
-            self.semantic.flags |= SemanticModelFlags::DEFERRED_CLASS_BASE;
+            self.semantic_mut().flags |= SemanticModelFlags::DEFERRED_CLASS_BASE;
             self.visit_expr(expr);
         }
-        self.semantic.restore(snapshot);
+        self.semantic_mut().restore(snapshot);
     }
 
     /// After initial traversal of the AST, visit all "future type definitions".
@@ -2593,27 +2506,27 @@ impl<'a> Checker<'a> {
     ///
     /// [PEP 563]: https://peps.python.org/pep-0563/
     fn visit_deferred_future_type_definitions(&mut self) {
-        let snapshot = self.semantic.snapshot();
+        let snapshot = self.semantic().snapshot();
         while !self.visit.future_type_definitions.is_empty() {
             let type_definitions = std::mem::take(&mut self.visit.future_type_definitions);
             for (expr, snapshot) in type_definitions {
-                self.semantic.restore(snapshot);
+                self.semantic_mut().restore(snapshot);
 
                 // Type definitions should only be considered "`__future__` type definitions"
                 // if they are annotations in a module where `from __future__ import
                 // annotations` is active, or they are type definitions in a stub file.
                 debug_assert!(
-                    (self.semantic.future_annotations_or_stub()
+                    (self.semantic().future_annotations_or_stub()
                         || self.target_version().defers_annotations())
-                        && (self.source_type.is_stub() || self.semantic.in_annotation())
+                        && (self.source_type.is_stub() || self.semantic().in_annotation())
                 );
 
-                self.semantic.flags |= SemanticModelFlags::TYPE_DEFINITION
+                self.semantic_mut().flags |= SemanticModelFlags::TYPE_DEFINITION
                     | SemanticModelFlags::FUTURE_TYPE_DEFINITION;
                 self.visit_expr(expr);
             }
         }
-        self.semantic.restore(snapshot);
+        self.semantic_mut().restore(snapshot);
     }
 
     /// After initial traversal of the AST, visit all [type parameter definitions].
@@ -2630,18 +2543,18 @@ impl<'a> Checker<'a> {
     ///
     /// [type parameter definitions]: https://docs.python.org/3/reference/executionmodel.html#annotation-scopes
     fn visit_deferred_type_param_definitions(&mut self) {
-        let snapshot = self.semantic.snapshot();
+        let snapshot = self.semantic().snapshot();
         while !self.visit.type_param_definitions.is_empty() {
             let type_params = std::mem::take(&mut self.visit.type_param_definitions);
             for (type_param, snapshot) in type_params {
-                self.semantic.restore(snapshot);
+                self.semantic_mut().restore(snapshot);
 
-                self.semantic.flags |=
+                self.semantic_mut().flags |=
                     SemanticModelFlags::TYPE_PARAM_DEFINITION | SemanticModelFlags::TYPE_DEFINITION;
                 self.visit_expr(type_param);
             }
         }
-        self.semantic.restore(snapshot);
+        self.semantic_mut().restore(snapshot);
     }
 
     /// After initial traversal of the AST, visit all "string type definitions",
@@ -2656,7 +2569,7 @@ impl<'a> Checker<'a> {
     /// class Bar: pass
     /// ```
     fn visit_deferred_string_type_definitions(&mut self) {
-        let snapshot = self.semantic.snapshot();
+        let snapshot = self.semantic().snapshot();
         while !self.visit.string_type_definitions.is_empty() {
             let type_definitions = std::mem::take(&mut self.visit.string_type_definitions);
             for (string_expr, snapshot) in type_definitions {
@@ -2667,19 +2580,25 @@ impl<'a> Checker<'a> {
                         let annotation = string_expr.value.to_str();
                         let range = string_expr.range();
 
-                        self.semantic.restore(snapshot);
+                        self.semantic_mut().restore(snapshot);
 
-                        if self.semantic.in_annotation()
-                            && self.semantic.in_typing_only_annotation()
+                        if self.semantic().in_annotation()
+                            && self.semantic().in_typing_only_annotation()
                         {
                             if self.enabled(Rule::QuotedAnnotation) {
-                                pyupgrade::rules::quoted_annotation(self, annotation, range);
+                                ruff_rule_pyupgrade::rules::quoted_annotation(
+                                    &self.snapshot(),
+                                    annotation,
+                                    range,
+                                );
                             }
                         }
                         if self.source_type.is_stub() {
                             if self.enabled(Rule::QuotedAnnotationInStub) {
-                                flake8_pyi::rules::quoted_annotation_in_stub(
-                                    self, annotation, range,
+                                ruff_rule_flake8_pyi::rules::quoted_annotation_in_stub(
+                                    &self.snapshot(),
+                                    annotation,
+                                    range,
                                 );
                             }
                         }
@@ -2693,15 +2612,15 @@ impl<'a> Checker<'a> {
                             }
                         };
 
-                        self.semantic.flags |=
+                        self.semantic_mut().flags |=
                             SemanticModelFlags::TYPE_DEFINITION | type_definition_flag;
                         let parsed_expr = parsed_annotation.expression();
                         self.visit_expr(parsed_expr);
-                        if self.semantic.in_type_alias_value() {
+                        if self.semantic().in_type_alias_value() {
                             // stub files are covered by PYI020
                             if !self.source_type.is_stub() && self.enabled(Rule::QuotedTypeAlias) {
-                                flake8_type_checking::rules::quoted_type_alias(
-                                    self,
+                                ruff_rule_flake8_type_checking::rules::quoted_type_alias(
+                                    &self.snapshot(),
                                     parsed_expr,
                                     string_expr,
                                 );
@@ -2710,11 +2629,11 @@ impl<'a> Checker<'a> {
                         self.parsed_type_annotation = None;
                     }
                     Err(parse_error) => {
-                        self.semantic.restore(snapshot);
+                        self.semantic_mut().restore(snapshot);
 
                         if self.enabled(Rule::ForwardAnnotationSyntaxError) {
                             self.report_type_diagnostic(Diagnostic::new(
-                                pyflakes::rules::ForwardAnnotationSyntaxError {
+                                pyflakes::ForwardAnnotationSyntaxError {
                                     parse_error: parse_error.error.to_string(),
                                 },
                                 string_expr.range(),
@@ -2751,9 +2670,9 @@ impl<'a> Checker<'a> {
             // *relative to the original module*, meaning the cache
             // (which uses `TextSize` as the key) becomes invalid on the second
             // iteration of this loop.
-            self.parsed_annotations_cache.clear();
+            self.parsed_annotations_cache.borrow().clear();
         }
-        self.semantic.restore(snapshot);
+        self.semantic_mut().restore(snapshot);
     }
 
     /// After initial traversal of the AST, visit all function bodies.
@@ -2762,13 +2681,13 @@ impl<'a> Checker<'a> {
     /// as the body of a function may validly contain references to global-scope symbols
     /// that were not yet defined at the point when the function was defined.
     fn visit_deferred_functions(&mut self) {
-        let snapshot = self.semantic.snapshot();
+        let snapshot = self.semantic().snapshot();
         while !self.visit.functions.is_empty() {
             let deferred_functions = std::mem::take(&mut self.visit.functions);
             for snapshot in deferred_functions {
-                self.semantic.restore(snapshot);
+                self.semantic_mut().restore(snapshot);
 
-                let stmt = self.semantic.current_statement();
+                let stmt = self.semantic().current_statement();
 
                 let Stmt::FunctionDef(ast::StmtFunctionDef {
                     body, parameters, ..
@@ -2785,24 +2704,24 @@ impl<'a> Checker<'a> {
                 self.visit_body(body);
             }
         }
-        self.semantic.restore(snapshot);
+        self.semantic_mut().restore(snapshot);
     }
 
     /// After initial traversal of the source tree has been completed,
     /// visit all lambdas. Lambdas are deferred during the initial traversal
     /// for the same reason as function bodies.
     fn visit_deferred_lambdas(&mut self) {
-        let snapshot = self.semantic.snapshot();
+        let snapshot = self.semantic().snapshot();
         while !self.visit.lambdas.is_empty() {
             let lambdas = std::mem::take(&mut self.visit.lambdas);
             for snapshot in lambdas {
-                self.semantic.restore(snapshot);
+                self.semantic_mut().restore(snapshot);
 
                 let Some(Expr::Lambda(ast::ExprLambda {
                     parameters,
                     body,
                     range: _,
-                })) = self.semantic.current_expression()
+                })) = self.semantic().current_expression()
                 else {
                     unreachable!("Expected Expr::Lambda");
                 };
@@ -2813,7 +2732,7 @@ impl<'a> Checker<'a> {
                 self.visit_expr(body);
             }
         }
-        self.semantic.restore(snapshot);
+        self.semantic_mut().restore(snapshot);
     }
 
     /// After initial traversal of the source tree has been completed,
@@ -2832,13 +2751,14 @@ impl<'a> Checker<'a> {
 
     /// Run any lint rules that operate over the module exports (i.e., members of `__all__`).
     fn visit_exports(&mut self) {
-        let snapshot = self.semantic.snapshot();
+        let semantic = self.semantic.borrow();
+        let snapshot = semantic.snapshot();
 
         let definitions: Vec<DunderAllDefinition> = self
-            .semantic
+            .semantic()
             .global_scope()
             .get_all("__all__")
-            .map(|binding_id| &self.semantic.bindings[binding_id])
+            .map(|binding_id| &semantic.bindings[binding_id])
             .filter_map(|binding| match &binding.kind {
                 BindingKind::Export(Export { names }) => {
                     Some(DunderAllDefinition::new(binding.range(), names.to_vec()))
@@ -2850,18 +2770,21 @@ impl<'a> Checker<'a> {
         for definition in definitions {
             for export in definition.names() {
                 let (name, range) = (export.name(), export.range());
-                if let Some(binding_id) = self.semantic.global_scope().get(name) {
-                    self.semantic.flags |= SemanticModelFlags::DUNDER_ALL_DEFINITION;
+                if let Some(binding_id) = semantic.global_scope().get(name) {
+                    self.semantic.borrow_mut().flags |= SemanticModelFlags::DUNDER_ALL_DEFINITION;
                     // Mark anything referenced in `__all__` as used.
-                    self.semantic
-                        .add_global_reference(binding_id, ExprContext::Load, range);
-                    self.semantic.flags -= SemanticModelFlags::DUNDER_ALL_DEFINITION;
+                    self.semantic.borrow_mut().add_global_reference(
+                        binding_id,
+                        ExprContext::Load,
+                        range,
+                    );
+                    self.semantic.borrow_mut().flags -= SemanticModelFlags::DUNDER_ALL_DEFINITION;
                 } else {
-                    if self.semantic.global_scope().uses_star_imports() {
+                    if self.semantic().global_scope().uses_star_imports() {
                         if self.enabled(Rule::UndefinedLocalWithImportStarUsage) {
-                            self.diagnostics.get_mut().push(
+                            self.diagnostics.borrow_mut().push(
                                 Diagnostic::new(
-                                    pyflakes::rules::UndefinedLocalWithImportStarUsage {
+                                    pyflakes::UndefinedLocalWithImportStarUsage {
                                         name: name.to_string(),
                                     },
                                     range,
@@ -2874,9 +2797,9 @@ impl<'a> Checker<'a> {
                             if is_undefined_export_in_dunder_init_enabled(self.settings)
                                 || !self.path.ends_with("__init__.py")
                             {
-                                self.diagnostics.get_mut().push(
+                                self.diagnostics.borrow_mut().push(
                                     Diagnostic::new(
-                                        pyflakes::rules::UndefinedExport {
+                                        pyflakes::UndefinedExport {
                                             name: name.to_string(),
                                         },
                                         range,
@@ -2890,41 +2813,7 @@ impl<'a> Checker<'a> {
             }
         }
 
-        self.semantic.restore(snapshot);
-    }
-}
-
-struct ParsedAnnotationsCache<'a> {
-    arena: &'a typed_arena::Arena<Result<ParsedAnnotation, ParseError>>,
-    by_offset: RefCell<FxHashMap<TextSize, Result<&'a ParsedAnnotation, &'a ParseError>>>,
-}
-
-impl<'a> ParsedAnnotationsCache<'a> {
-    fn new(arena: &'a typed_arena::Arena<Result<ParsedAnnotation, ParseError>>) -> Self {
-        Self {
-            arena,
-            by_offset: RefCell::default(),
-        }
-    }
-
-    fn lookup_or_parse(
-        &self,
-        annotation: &ast::ExprStringLiteral,
-        source: &str,
-    ) -> Result<&'a ParsedAnnotation, &'a ParseError> {
-        *self
-            .by_offset
-            .borrow_mut()
-            .entry(annotation.start())
-            .or_insert_with(|| {
-                self.arena
-                    .alloc(parse_type_annotation(annotation, source))
-                    .as_ref()
-            })
-    }
-
-    fn clear(&self) {
-        self.by_offset.borrow_mut().clear();
+        self.semantic.borrow_mut().restore(snapshot);
     }
 }
 
@@ -3000,11 +2889,11 @@ pub(crate) fn check_ast(
     analyze::deferred_lambdas(&mut checker);
     analyze::deferred_for_loops(&mut checker);
     analyze::definitions(&mut checker);
-    analyze::bindings(&checker);
+    analyze::bindings(&checker.snapshot());
     analyze::unresolved_references(&checker);
 
     // Reset the scope to module-level, and check all consumed scopes.
-    checker.semantic.scope_id = ScopeId::global();
+    checker.semantic_mut().scope_id = ScopeId::global();
     checker.analyze.scopes.push(ScopeId::global());
     analyze::deferred_scopes(&checker);
 
@@ -3014,5 +2903,8 @@ pub(crate) fn check_ast(
         ..
     } = checker;
 
-    (diagnostics.into_inner(), semantic_errors.into_inner())
+    (
+        Rc::into_inner(diagnostics).unwrap().into_inner(),
+        Rc::into_inner(semantic_errors).unwrap().into_inner(),
+    )
 }

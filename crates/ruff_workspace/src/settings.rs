@@ -1,13 +1,13 @@
 use path_absolutize::path_dedot;
 use ruff_cache::cache_dir;
-use ruff_formatter::{FormatOptions, IndentStyle, IndentWidth, LineWidth};
-use ruff_graph::AnalyzeSettings;
-use ruff_linter::display_settings;
-use ruff_linter::settings::types::{
+use ruff_codes::types::{
     CompiledPerFileTargetVersionList, ExtensionMapping, FilePattern, FilePatternSet, OutputFormat,
     UnsafeFixes,
 };
-use ruff_linter::settings::LinterSettings;
+use ruff_formatter::{FormatOptions, IndentStyle, IndentWidth, LineWidth};
+use ruff_graph::AnalyzeSettings;
+use ruff_linter_macros::display_settings;
+use ruff_linter_settings::LinterSettings;
 use ruff_macros::CacheKey;
 use ruff_python_ast::{PySourceType, PythonVersion};
 use ruff_python_formatter::{
